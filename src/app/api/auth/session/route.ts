@@ -35,6 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
+    console.error("Unable to create Firebase session.", error);
     return NextResponse.json({ error: "Unable to create a session." }, { status: 401 });
   }
 }
