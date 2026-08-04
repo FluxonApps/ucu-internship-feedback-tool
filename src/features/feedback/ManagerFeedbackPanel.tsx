@@ -100,20 +100,30 @@ function CycleCard({
             {reviewer.response ? (
               <div className="mt-4 space-y-4 text-sm">
                 {feedbackMatrices.map((matrix) => (
-                  <div key={matrix.value}>
-                    <p className="font-medium">{matrix.label}</p>
-                    <dl className="mt-2 grid gap-1">
+                  <div key={matrix.value} className="space-y-2">
+                    {/* Чітко виділений заголовок секції */}
+                    <div className="border-b pb-1">
+                      <h4 className="font-semibold text-foreground">
+                        {matrix.label}
+                      </h4>
+                    </div>
+                    {/* Список критеріїв із пунктирною лінією */}
+                    <dl className="grid gap-1.5 pt-1">
                       {matrix.criteria.map((criterion) => {
                         const score = reviewer.response?.ratings[criterion.value];
+                        const ratingLabel =
+                          feedbackRatings.find((item) => item.value === score)
+                            ?.label ?? "—";
                         return (
                           <div
                             key={criterion.value}
-                            className="flex justify-between gap-4"
+                            className="flex items-baseline justify-between gap-2"
                           >
-                            <dt>{criterion.label}</dt>
-                            <dd>
-                              {feedbackRatings.find((item) => item.value === score)
-                                ?.label ?? "—"}
+                            <dt className="text-muted-foreground">{criterion.label}</dt>
+                            {/* Пунктирна лінія, що з'єднує назву критерію та відповідь */}
+                            <div className="flex-1 border-b border-dashed border-border/60 mx-1" />
+                            <dd className="font-medium shrink-0 text-foreground">
+                              {ratingLabel}
                             </dd>
                           </div>
                         );
@@ -121,6 +131,8 @@ function CycleCard({
                     </dl>
                   </div>
                 ))}
+
+                {/* Оригінальний формат для текстових питань */}
                 <p>
                   <strong>What the intern was doing well:</strong>{" "}
                   {reviewer.response.positiveFeedback}
