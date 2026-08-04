@@ -121,28 +121,52 @@ function CycleCard({
                     </dl>
                   </div>
                 ))}
+
+              <section className="space-y-3">
                 <p>
                   <strong>What the intern was doing well:</strong>{" "}
                   {reviewer.response.positiveFeedback}
                 </p>
+
                 <p>
                   <strong>What the intern could be doing even better:</strong>{" "}
                   {reviewer.response.constructiveFeedback}
                 </p>
-                {reviewer.response.managerOnlyFeedback ? (
-                  <details className="rounded-lg bg-background/70 p-3">
-                    <summary className="cursor-pointer font-medium">
-                      What the manager should know or act on
-                    </summary>
-                    <p className="mt-2">{reviewer.response.managerOnlyFeedback}</p>
-                  </details>
+              </section>
+
+                {cycle.customQuestions.length > 0 ? (
+                  <section className="space-y-3">
+                    <h4 className="text-base font-semibold text-muted-foreground">
+                      Additional questions
+                    </h4>
+
+                    {cycle.customQuestions.map((question) => (
+                      <p key={question.id}>
+                        <strong>{question.prompt}:</strong>{" "}
+                        {reviewer.response?.customAnswers[question.id]}
+                      </p>
+                    ))}
+                  </section>
                 ) : null}
-                {cycle.customQuestions.map((question) => (
-                  <p key={question.id}>
-                    <strong>{question.prompt}:</strong>{" "}
-                    {reviewer.response?.customAnswers[question.id]}
-                  </p>
-                ))}
+                {reviewer.response.managerOnlyFeedback ? (
+                  <section className="space-y-2 rounded-lg border border-dashed bg-background/70 p-3">
+                    <div>
+                      <p className="font-medium">Manager-only notes</p>
+                      <p className="text-xs text-muted-foreground">
+                        Visible only to assigned managers.
+                      </p>
+                    </div>
+
+                    <details>
+                      <summary className="cursor-pointer font-medium">
+                        What the manager should know or act on
+                      </summary>
+                      <p className="mt-2 whitespace-pre-wrap">
+                        {reviewer.response.managerOnlyFeedback}
+                      </p>
+                    </details>
+                  </section>
+                ) : null}
               </div>
             ) : reviewer.status === "draft" ? (
               <p className="mt-3 text-sm text-muted-foreground">
