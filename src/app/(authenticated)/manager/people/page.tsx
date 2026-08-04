@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
-import { ProvisionUserForm } from "@/features/assignments/ProvisionUserForm";
+import { ProvisionUserForm } from "@/features/assignments/ui/ProvisionUserForm";
 import { requireManagerPage } from "@/server/assignments/page-auth";
 import { listEligibleUsers } from "@/server/assignments/service";
 
