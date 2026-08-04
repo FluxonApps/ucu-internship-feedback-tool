@@ -48,11 +48,14 @@ export default async function TeammateInternshipPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        <Menu
-          items={workspaceMenu}
-          label="Internship navigation"
-          className="md:flex-col md:overflow-visible"
-        />
+        {/* Зафіксоване бічне меню при скролі */}
+        <div className="md:sticky md:top-24 md:self-start">
+          <Menu
+            items={workspaceMenu}
+            label="Internship navigation"
+            className="md:flex-col md:overflow-visible"
+          />
+        </div>
         <div className="space-y-10">
           <section
             id="feedback"

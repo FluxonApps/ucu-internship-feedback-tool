@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import type { ApplicationUserOption } from "@/lib/assignments/types";
 
-import { CreateInternshipForm } from "./CreateInternshipForm";
+import { CreateInternshipForm } from "../CreateInternshipForm";
 
 export function CreateInternshipDialog({
   interns,

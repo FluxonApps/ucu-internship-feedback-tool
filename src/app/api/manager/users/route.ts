@@ -10,6 +10,8 @@ import { adminFirestore } from "@/server/firebase/admin";
 import { findAppUserByEmail, normalizeEmail } from "@/server/repositories/app-users";
 
 const requestSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required."),
+  lastName: z.string().trim().min(1, "Last name is required."),
   email: z.string().email(),
   roles: z
     .array(z.enum(["intern", "teammate"]))
@@ -21,18 +23,26 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   try {
     await requireManagerMutationContext(request);
-    const { email, roles } = requestSchema.parse(await request.json());
+    const { firstName, lastName, email, roles } = requestSchema.parse(
+      await request.json(),
+    );
     const normalizedEmail = normalizeEmail(email);
+
     if (await findAppUserByEmail(normalizedEmail)) {
       return NextResponse.json(
         { error: "An application user already exists for this email." },
         { status: 409 },
       );
     }
+
+    const displayName = `${firstName} ${lastName}`.trim();
+
     const userRef = adminFirestore.collection("users").doc();
     await userRef.create({
       email: normalizedEmail,
-      displayName: normalizedEmail,
+      displayName,
+      firstName,
+      lastName,
       active: true,
       roles,
       identityState: "pending",
@@ -40,6 +50,7 @@ export async function POST(request: Request) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+
     return NextResponse.json({ id: userRef.id }, { status: 201 });
   } catch (error) {
     return assignmentErrorResponse(error);
