@@ -11,26 +11,43 @@ export function ProvisionUserForm() {
   const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError("");
-    const response = await fetch("/api/manager/users", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        email,
-        roles,
-      }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setError(body.error ?? "Unable to provision access.");
+
+    try {
+      const response = await fetch("/api/manager/users", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email,
+          roles,
+        }),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        setError(body.error ?? "Unable to provision access.");
+        return;
+      }
+
+      // 1. Очищаємо інпути при успішній відправці
+      setEmail("");
+      setRoles([]);
+
+      // 2. Оновлюємо server components (список нижче)
+      router.refresh();
+    } catch {
+      setError("An unexpected error occurred.");
+    } finally {
+      // 3. Завжди скидаємо стан pending (кнопка розблокується)
       setPending(false);
-      return;
     }
-    router.refresh();
   }
+
   return (
     <form
       onSubmit={submit}
