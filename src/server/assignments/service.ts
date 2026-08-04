@@ -10,27 +10,25 @@ import { z } from "zod";
 import { AuthorizationError } from "@/server/authorization/errors";
 import type { ApplicationUserOption, TeamOption } from "@/lib/assignments/types";
 import {
+  internshipDocumentSchema,
+  managerAssignmentDocumentSchema,
+  teamDocumentSchema,
+  teammateAssignmentDocumentSchema,
+  teammateResponsibilitySchema,
+  teamPlacementDocumentSchema,
+} from "@/server/assignments/models";
+import {
   assignmentStatus,
   assertValidRange,
   containsRange,
   isCurrent,
   isOngoingOrScheduled,
   rangesOverlap,
-  type DateRange,
 } from "@/server/assignments/domain";
 import { adminFirestore } from "@/server/firebase/admin";
 import { appUserSchema, type AppUser } from "@/server/users/app-user";
-import {
-  teammateResponsibilities,
-  type TeammateResponsibility,
-} from "@/lib/teammate-responsibilities";
 
-export const responsibilitySchema = z.enum(
-  teammateResponsibilities.map(({ value }) => value) as [
-    TeammateResponsibility,
-    ...TeammateResponsibility[],
-  ],
-);
+export const responsibilitySchema = teammateResponsibilitySchema;
 
 export const teamInputSchema = z.union([
   z.object({ teamId: z.string().min(1), newTeamName: z.never().optional() }),
@@ -97,6 +95,9 @@ async function requireManagedInternship(internshipId: string, managerId: string)
     );
   }
 
+  internshipDocumentSchema.parse(internship.data());
+  managerAssignmentDocumentSchema.parse(managerAssignment.data());
+
   return internshipRef;
 }
 
@@ -119,6 +120,9 @@ async function requireTeammateInternship(internshipId: string, teammateUserId: s
     );
   }
 
+  internshipDocumentSchema.parse(internship.data());
+  teammateAssignmentDocumentSchema.parse(assignments.docs[0].data());
+
   return internshipRef;
 }
 
@@ -133,6 +137,7 @@ async function resolveTeam(
     if (!team.exists) {
       throw new Error("The selected Team no longer exists.");
     }
+    teamDocumentSchema.parse(team.data());
     return teamRef;
   }
 
@@ -160,6 +165,11 @@ async function getEligibleUser(
   return data;
 }
 
+async function getUserDisplayName(userId: string, fallback: string): Promise<string> {
+  const user = await adminFirestore.collection("users").doc(userId).get();
+  return user.exists ? appUserSchema.parse(user.data()).displayName : fallback;
+}
+
 export async function listManagedInternships(managerId: string) {
   const assignments = await adminFirestore
     .collectionGroup("managerAssignments")
@@ -170,14 +180,12 @@ export async function listManagedInternships(managerId: string) {
     assignments.docs.map(async (assignment) => {
       const internship = await assignment.ref.parent.parent?.get();
       if (!internship?.exists) return undefined;
-      const data = internship.data() as { internId: string; status: string };
-      const intern = await adminFirestore.collection("users").doc(data.internId).get();
+      managerAssignmentDocumentSchema.parse(assignment.data());
+      const data = internshipDocumentSchema.parse(internship.data());
       return {
         id: internship.id,
         status: data.status,
-        internName: intern.exists
-          ? (intern.data()?.displayName as string)
-          : "Unknown intern",
+        internName: await getUserDisplayName(data.internId, "Unknown intern"),
       };
     }),
   );
@@ -194,6 +202,7 @@ export async function listTeammateInternships(teammateUserId: string) {
     .get();
   const internshipRefs = new Map(
     assignments.docs.flatMap((assignment) => {
+      teammateAssignmentDocumentSchema.parse(assignment.data());
       const internshipRef = assignment.ref.parent.parent;
       return internshipRef ? [[internshipRef.id, internshipRef] as const] : [];
     }),
@@ -202,14 +211,11 @@ export async function listTeammateInternships(teammateUserId: string) {
     [...internshipRefs.values()].map(async (internshipRef) => {
       const internship = await internshipRef.get();
       if (!internship.exists) return undefined;
-      const data = internship.data() as { internId: string; status: string };
-      const intern = await adminFirestore.collection("users").doc(data.internId).get();
+      const data = internshipDocumentSchema.parse(internship.data());
       return {
         id: internship.id,
         status: data.status,
-        internName: intern.exists
-          ? (intern.data()?.displayName as string)
-          : "Unknown intern",
+        internName: await getUserDisplayName(data.internId, "Unknown intern"),
       };
     }),
   );
@@ -228,7 +234,7 @@ export async function getCurrentInternshipForIntern(internId: string) {
   const current = internships.docs
     .map((document) => ({
       id: document.id,
-      ...(document.data() as DateRange & { status: string }),
+      ...internshipDocumentSchema.parse(document.data()),
     }))
     .filter(
       (internship) => internship.status === "active" && isCurrent(internship, now),
@@ -263,10 +269,7 @@ async function listUnavailableInternIds(): Promise<Set<string>> {
 
   return new Set(
     internships.docs.flatMap((document) => {
-      const data = document.data() as DateRange & {
-        internId: string;
-        status: string;
-      };
+      const data = internshipDocumentSchema.parse(document.data());
       return data.status === "active" && isOngoingOrScheduled(data, now)
         ? [data.internId]
         : [];
@@ -298,32 +301,42 @@ export async function getManagedInternshipDetail(
     internshipRef.collection("teammateAssignments").orderBy("startsAt", "desc").get(),
     listEligibleUsers("teammate"),
   ]);
-  const internshipData = internship.data() as { internId: string; status: string };
-  const intern = await adminFirestore
-    .collection("users")
-    .doc(internshipData.internId)
-    .get();
+  const internshipData = internshipDocumentSchema.parse(internship.data());
   const teamIds = new Set<string>();
-  placements.docs.forEach((document) => teamIds.add(document.data().teamId as string));
-  assignments.docs.forEach((document) => teamIds.add(document.data().teamId as string));
+  placements.docs.forEach((document) =>
+    teamIds.add(teamPlacementDocumentSchema.parse(document.data()).teamId),
+  );
+  assignments.docs.forEach((document) =>
+    teamIds.add(teammateAssignmentDocumentSchema.parse(document.data()).teamId),
+  );
   const teams = new Map(
     (
       await Promise.all(
         [...teamIds].map(async (id) => {
           const document = await adminFirestore.collection("teams").doc(id).get();
-          return [id, document.data()?.title as string | undefined] as const;
+          return document.exists
+            ? ([id, teamDocumentSchema.parse(document.data()).title] as const)
+            : ([id, undefined] as const);
         }),
       )
     ).filter((entry): entry is [string, string] => Boolean(entry[1])),
   );
   const teammateIds = new Set(
-    assignments.docs.map((document) => document.data().teammateUserId as string),
+    assignments.docs.map(
+      (document) =>
+        teammateAssignmentDocumentSchema.parse(document.data()).teammateUserId,
+    ),
   );
   const teammateNames = new Map(
     await Promise.all(
       [...teammateIds].map(async (id) => {
         const document = await adminFirestore.collection("users").doc(id).get();
-        return [id, document.data()?.displayName as string | undefined] as const;
+        return [
+          id,
+          document.exists
+            ? appUserSchema.parse(document.data()).displayName
+            : undefined,
+        ] as const;
       }),
     ),
   );
@@ -331,10 +344,10 @@ export async function getManagedInternshipDetail(
     internship: {
       id: internshipId,
       status: internshipData.status,
-      internName: intern.data()?.displayName as string,
+      internName: await getUserDisplayName(internshipData.internId, "Unknown intern"),
     },
     placements: placements.docs.map((document) => {
-      const data = document.data() as DateRange & { teamId: string };
+      const data = teamPlacementDocumentSchema.parse(document.data());
       return {
         id: document.id,
         teamId: data.teamId,
@@ -346,11 +359,7 @@ export async function getManagedInternshipDetail(
       };
     }),
     assignments: assignments.docs.map((document) => {
-      const data = document.data() as DateRange & {
-        teamId: string;
-        teammateUserId: string;
-        responsibilities: string[];
-      };
+      const data = teammateAssignmentDocumentSchema.parse(document.data());
       return {
         id: document.id,
         teamId: data.teamId,
@@ -374,15 +383,11 @@ export async function getTeammateInternshipDetail(
 ) {
   const internshipRef = await requireTeammateInternship(internshipId, teammateUserId);
   const internship = await internshipRef.get();
-  const data = internship.data() as { internId: string; status: string };
-  const intern = await adminFirestore.collection("users").doc(data.internId).get();
-
+  const data = internshipDocumentSchema.parse(internship.data());
   return {
     id: internshipId,
     status: data.status,
-    internName: intern.exists
-      ? (intern.data()?.displayName as string)
-      : "Unknown intern",
+    internName: await getUserDisplayName(data.internId, "Unknown intern"),
   };
 }
 
@@ -394,7 +399,10 @@ export async function searchTeams(query: string): Promise<TeamOption[]> {
     .get();
   const normalizedQuery = query.trim().toLowerCase();
   return snapshot.docs
-    .map((document) => ({ id: document.id, title: document.data().title as string }))
+    .map((document) => ({
+      id: document.id,
+      title: teamDocumentSchema.parse(document.data()).title,
+    }))
     .filter(
       (team) => !normalizedQuery || team.title.toLowerCase().includes(normalizedQuery),
     );
@@ -456,7 +464,7 @@ export async function addTeamPlacement(
     );
     const existing = placements.docs.map((document) => ({
       ref: document.ref,
-      ...(document.data() as DateRange & { teamId: string }),
+      ...teamPlacementDocumentSchema.parse(document.data()),
     }));
     if (existing.some((placement) => rangesOverlap(placement, input))) {
       const ongoing = existing.find(
@@ -475,7 +483,7 @@ export async function addTeamPlacement(
         internshipRef.collection("teammateAssignments"),
       );
       teammates.docs.forEach((document) => {
-        const assignment = document.data() as DateRange & { teamId: string };
+        const assignment = teammateAssignmentDocumentSchema.parse(document.data());
         if (assignment.teamId === ongoing.teamId && !assignment.endsAt) {
           transaction.update(document.ref, {
             endsAt: previousEnd,
@@ -513,7 +521,7 @@ export async function addTeammateAssignment(
       internshipRef.collection("teamPlacements"),
     );
     const hasPlacement = placements.docs.some((document) => {
-      const placement = document.data() as DateRange & { teamId: string };
+      const placement = teamPlacementDocumentSchema.parse(document.data());
       return placement.teamId === input.teamId && containsRange(placement, input);
     });
     if (!hasPlacement)
@@ -523,10 +531,7 @@ export async function addTeammateAssignment(
     );
     if (
       assignments.docs.some((document) => {
-        const assignment = document.data() as DateRange & {
-          teammateUserId: string;
-          teamId: string;
-        };
+        const assignment = teammateAssignmentDocumentSchema.parse(document.data());
         return (
           assignment.teammateUserId === input.teammateUserId &&
           assignment.teamId === input.teamId &&
@@ -562,7 +567,10 @@ export async function updateTeammateResponsibilities(
     .doc(assignmentId);
   const assignment = await assignmentRef.get();
   if (!assignment.exists) throw new Error("Teammate assignment not found.");
-  if (assignmentStatus(assignment.data() as DateRange) === "ended")
+  if (
+    assignmentStatus(teammateAssignmentDocumentSchema.parse(assignment.data())) ===
+    "ended"
+  )
     throw new Error("Ended assignments cannot be edited.");
   await assignmentRef.update({
     responsibilities,
@@ -582,7 +590,7 @@ export async function closeTeammateAssignment(
     .doc(assignmentId);
   const assignment = await assignmentRef.get();
   if (!assignment.exists) throw new Error("Teammate assignment not found.");
-  if ((assignment.data() as DateRange).endsAt) return;
+  if (teammateAssignmentDocumentSchema.parse(assignment.data()).endsAt) return;
   await assignmentRef.update({
     endsAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
