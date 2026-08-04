@@ -1,5 +1,7 @@
 "use client";
 
+import { updateFeedbackDueDate } from "@/features/feedback/api/updateFeedbackDueDate";
+import { publishFeedbackCycle } from "@/features/feedback/api/publishFeedbackCycle";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -224,19 +226,17 @@ function PublishCycle({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycle.id}/publish`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ managerRecommendation }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to publish feedback.");
+      const result = await publishFeedbackCycle({
+        internshipId,
+        cycleId: cycle.id,
+        managerRecommendation,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
+
       close();
       router.refresh();
     } catch {
@@ -334,19 +334,16 @@ function EditDueDate({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycleId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            dueAt: value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null,
-          }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to update the due date.");
+      const result = await updateFeedbackDueDate({
+        internshipId,
+        cycleId,
+        dueAt: value
+          ? new Date(`${value}T00:00:00.000Z`).toISOString()
+          : null,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
       close();
