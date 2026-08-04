@@ -32,4 +32,17 @@ read access.
 
 ## Feedback
 
-ToDo
+Canonical models: [`src/server/feedback/models.ts`](../src/server/feedback/models.ts)
+
+```text
+internships/{internshipId}
+  feedbackCycles/{cycleId}
+    reviewers/{reviewerUserId}
+    responses/{reviewerUserId}
+```
+
+| Collection       | Canonical model            | Purpose                                                                                                |
+| ---------------- | -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `feedbackCycles` | `FeedbackCycleDocument`    | Defines the timeline, custom questions manager metadata, and current state of feedback cycle.          |
+| `reviewers`      | `FeedbackReviewerDocument` | Tracks an individual teammate's participation status and historical responsibilities during the cycle. |
+| `responses`      | `FeedbackResponseDocument` | Stores the actual submitted feedback ratings, positive/constructive texts, and custom answers.         |

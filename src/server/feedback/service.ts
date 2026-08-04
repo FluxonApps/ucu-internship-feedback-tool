@@ -16,36 +16,26 @@ import type {
   ReviewerStatusDto,
   TeammateFeedbackDto,
 } from "@/lib/feedback/types";
-import type { TeammateResponsibility } from "@/lib/teammate-responsibilities";
 import { isCurrent } from "@/server/assignments/domain";
 import { AuthorizationError } from "@/server/authorization/errors";
 import { adminFirestore } from "@/server/firebase/admin";
 
+import {
+  feedbackCycleDocumentSchema,
+  feedbackReviewerDocumentSchema,
+  feedbackResponseDocumentSchema,
+  type FeedbackResponseDocument,
+} from "./models";
+import {
+  internshipDocumentSchema,
+  managerAssignmentDocumentSchema,
+  teammateAssignmentDocumentSchema,
+} from "@/server/assignments/models";
+import { appUserSchema } from "@/server/users/app-user";
+
 import { assertValidEvaluationRange, assertValidFeedbackAnswers } from "./domain";
 import type { createFeedbackCycleInputSchema, FeedbackAnswersInput } from "./schemas";
 
-type CycleData = {
-  evaluationStartsAt: Timestamp;
-  evaluationEndsAt: Timestamp;
-  dueAt?: Timestamp;
-  customQuestions: Array<{ id: string; prompt: string }>;
-  cancelledAt?: Timestamp;
-  cancellationReason?: string;
-  publishedAt?: Timestamp;
-  publishedBy?: string;
-  publishedByDisplayNameSnapshot?: string;
-  managerRecommendation?: string;
-};
-
-type ReviewerData = {
-  reviewerUserId: string;
-  reviewerDisplayNameSnapshot: string;
-  responsibilitiesSnapshot?: TeammateResponsibility[];
-  status: "notStarted" | "draft" | "submitted";
-  submittedAt?: Timestamp;
-};
-
-type ResponseData = FeedbackAnswersDto;
 
 async function requireManagedInternship(internshipId: string, managerId: string) {
   const ref = adminFirestore.collection("internships").doc(internshipId);
@@ -53,6 +43,7 @@ async function requireManagedInternship(internshipId: string, managerId: string)
     ref.get(),
     ref.collection("managerAssignments").doc(managerId).get(),
   ]);
+
   if (!internship.exists || !assignment.exists) {
     throw new AuthorizationError(
       "ROLE_REQUIRED",
@@ -60,10 +51,14 @@ async function requireManagedInternship(internshipId: string, managerId: string)
       "manager",
     );
   }
+
+  internshipDocumentSchema.parse(internship.data());
+  managerAssignmentDocumentSchema.parse(assignment.data());
+
   return ref;
 }
 
-function answersDto(data: Partial<ResponseData> | undefined): FeedbackAnswersDto {
+function answersDto(data: Partial<FeedbackResponseDocument> | undefined): FeedbackAnswersDto {
   return {
     ratings: data?.ratings ?? {},
     positiveFeedback: data?.positiveFeedback ?? "",
@@ -77,18 +72,21 @@ async function cycleDto(
   cycle: FirebaseFirestore.QueryDocumentSnapshot,
   includeSubmittedResponses: boolean,
 ): Promise<FeedbackCycleDto> {
-  const data = cycle.data() as CycleData;
+  const data = feedbackCycleDocumentSchema.parse(cycle.data());
   const reviewers = await cycle.ref.collection("reviewers").get();
+
   const reviewerDtos = await Promise.all(
     reviewers.docs.map(async (document): Promise<ReviewerStatusDto> => {
-      const reviewer = document.data() as ReviewerData;
+      const reviewer = feedbackReviewerDocumentSchema.parse(document.data());
       let response: FeedbackAnswersDto | undefined;
+
       if (includeSubmittedResponses && reviewer.status === "submitted") {
         const stored = await cycle.ref.collection("responses").doc(document.id).get();
         response = stored.exists
-          ? answersDto(stored.data() as ResponseData)
+          ? answersDto(feedbackResponseDocumentSchema.parse(stored.data()))
           : undefined;
       }
+
       return {
         reviewerUserId: document.id,
         reviewerDisplayName: reviewer.reviewerDisplayNameSnapshot,
@@ -99,9 +97,11 @@ async function cycleDto(
       };
     }),
   );
+
   const reviewerValues = reviewerDtos.sort((a, b) =>
     a.reviewerDisplayName.localeCompare(b.reviewerDisplayName),
   );
+
   return {
     id: cycle.id,
     evaluationStartsAt: data.evaluationStartsAt.toDate().toISOString(),
@@ -139,7 +139,8 @@ async function publishedFeedbackDto(
   internDisplayName: string,
   cycle: FirebaseFirestore.QueryDocumentSnapshot,
 ): Promise<PublishedFeedbackDto> {
-  const data = cycle.data() as CycleData;
+  const data = feedbackCycleDocumentSchema.parse(cycle.data());
+
   if (
     feedbackCycleState(data) !== "published" ||
     !data.publishedAt ||
@@ -149,6 +150,7 @@ async function publishedFeedbackDto(
   ) {
     throw new Error("Published feedback metadata is incomplete.");
   }
+
   const managerCycle = await cycleDto(cycle, true);
   return {
     internshipId,
@@ -168,18 +170,22 @@ async function listPublishedFeedbackForInternship(
 ): Promise<PublishedFeedbackDto[]> {
   const internship = await internshipRef.get();
   if (!internship.exists) return [];
-  const internshipData = internship.data() as { internId: string };
+
+  const internshipData = internshipDocumentSchema.parse(internship.data());
   const intern = await adminFirestore
     .collection("users")
     .doc(internshipData.internId)
     .get();
+
   const internDisplayName = intern.exists
-    ? (intern.data()?.displayName as string)
+    ? appUserSchema.parse(intern.data()).displayName
     : "Unknown intern";
+
   const cycles = await internshipRef.collection("feedbackCycles").get();
   const published = cycles.docs.filter(
-    (cycle) => feedbackCycleState(cycle.data()) === "published",
+    (cycle) => feedbackCycleState(feedbackCycleDocumentSchema.parse(cycle.data())) === "published",
   );
+
   const result = await Promise.all(
     published.map((cycle) =>
       publishedFeedbackDto(internshipRef.id, internDisplayName, cycle),
@@ -194,7 +200,8 @@ export async function listInternPublishedFeedback(
 ): Promise<PublishedFeedbackDto[]> {
   const internshipRef = adminFirestore.collection("internships").doc(internshipId);
   const internship = await internshipRef.get();
-  if (!internship.exists || internship.data()?.internId !== internId) {
+
+  if (!internship.exists || internshipDocumentSchema.parse(internship.data()).internId !== internId) {
     throw new AuthorizationError(
       "ROLE_REQUIRED",
       "You cannot view this internship's feedback.",
@@ -211,25 +218,25 @@ export async function listGuestPublishedInternships(): Promise<
     .collection("internships")
     .where("publishedFeedbackCycleCount", ">", 0)
     .get();
+
   const values = await Promise.all(
     internships.docs.map(async (internship) => {
-      const data = internship.data() as {
-        internId: string;
-        latestFeedbackPublishedAt: Timestamp;
-        publishedFeedbackCycleCount: number;
-      };
+      const data = internshipDocumentSchema.parse(internship.data());
       const intern = await adminFirestore.collection("users").doc(data.internId).get();
+
       if (!data.latestFeedbackPublishedAt) return undefined;
+
       return {
         internshipId: internship.id,
         internDisplayName: intern.exists
-          ? (intern.data()?.displayName as string)
+          ? appUserSchema.parse(intern.data()).displayName
           : "Unknown intern",
         latestPublishedAt: data.latestFeedbackPublishedAt.toDate().toISOString(),
-        publishedCycleCount: data.publishedFeedbackCycleCount,
+        publishedCycleCount: data.publishedFeedbackCycleCount ?? 0,
       } satisfies PublishedInternshipSummaryDto;
     }),
   );
+
   return values
     .filter((value): value is PublishedInternshipSummaryDto => Boolean(value))
     .sort((a, b) => b.latestPublishedAt.localeCompare(a.latestPublishedAt));
@@ -240,12 +247,16 @@ export async function listGuestPublishedFeedback(
 ): Promise<PublishedFeedbackDto[]> {
   const internshipRef = adminFirestore.collection("internships").doc(internshipId);
   const internship = await internshipRef.get();
-  if (
-    !internship.exists ||
-    !(Number(internship.data()?.publishedFeedbackCycleCount) > 0)
-  ) {
+
+  if (!internship.exists) {
     throw new Error("Published internship feedback was not found.");
   }
+
+  const data = internshipDocumentSchema.parse(internship.data());
+  if (!(Number(data.publishedFeedbackCycleCount) > 0)) {
+    throw new Error("Published internship feedback was not found.");
+  }
+
   return listPublishedFeedbackForInternship(internshipRef);
 }
 
@@ -257,6 +268,7 @@ export async function publishFeedbackCycle(
 ) {
   const managerRecommendation = recommendation.trim();
   if (!managerRecommendation) throw new Error("Manager recommendation is required.");
+
   const internshipRef = await requireManagedInternship(internshipId, managerId);
   const [manager, reviewers] = await Promise.all([
     adminFirestore.collection("users").doc(managerId).get(),
@@ -266,9 +278,11 @@ export async function publishFeedbackCycle(
       .collection("reviewers")
       .get(),
   ]);
+
   const managerDisplayName = manager.exists
-    ? (manager.data()?.displayName as string)
+    ? appUserSchema.parse(manager.data()).displayName
     : "Unknown manager";
+
   const cycleRef = internshipRef.collection("feedbackCycles").doc(cycleId);
   const managerAssignmentRef = internshipRef
     .collection("managerAssignments")
@@ -285,6 +299,7 @@ export async function publishFeedbackCycle(
     const internship = documents[0];
     const cycle = documents[1];
     const managerAssignment = documents[2];
+
     if (!internship.exists || !managerAssignment.exists) {
       throw new AuthorizationError(
         "ROLE_REQUIRED",
@@ -292,17 +307,19 @@ export async function publishFeedbackCycle(
         "manager",
       );
     }
-    if (
-      !cycle.exists ||
-      feedbackCycleState(cycle.data() as CycleData) !== "collecting"
-    ) {
+
+    if (!cycle.exists) {
+      throw new Error("Only a collecting cycle can be published.");
+    }
+
+    const cycleData = feedbackCycleDocumentSchema.parse(cycle.data());
+    if (feedbackCycleState(cycleData) !== "collecting") {
       throw new Error("Only a collecting cycle can be published.");
     }
 
     const now = Timestamp.now();
-    const internshipData = internship.data() as {
-      publishedFeedbackCycleCount?: number;
-    };
+    const internshipData = internshipDocumentSchema.parse(internship.data());
+
     transaction.update(cycleRef, {
       publishedAt: now,
       publishedBy: managerId,
@@ -311,9 +328,9 @@ export async function publishFeedbackCycle(
       updatedAt: now,
       updatedBy: managerId,
     });
+
     transaction.update(internshipRef, {
-      publishedFeedbackCycleCount:
-        (internshipData.publishedFeedbackCycleCount ?? 0) + 1,
+      publishedFeedbackCycleCount: (internshipData.publishedFeedbackCycleCount ?? 0) + 1,
       latestFeedbackPublishedAt: now,
       updatedAt: now,
       updatedBy: managerId,
@@ -329,28 +346,30 @@ export async function startFeedbackCycle(
   assertValidEvaluationRange(input.evaluationStartsAt, input.evaluationEndsAt);
   const internshipRef = await requireManagedInternship(internshipId, managerId);
   const existing = await internshipRef.collection("feedbackCycles").get();
+
   if (
-    existing.docs.some((cycle) => feedbackCycleState(cycle.data()) === "collecting")
+    existing.docs.some(
+      (cycle) => feedbackCycleState(feedbackCycleDocumentSchema.parse(cycle.data())) === "collecting"
+    )
   ) {
     throw new Error("A collecting feedback cycle already exists.");
   }
 
   const now = Timestamp.now();
   const assignments = await internshipRef.collection("teammateAssignments").get();
+
   const current = assignments.docs.filter((document) => {
-    const data = document.data() as { startsAt: Timestamp; endsAt?: Timestamp };
+    const data = teammateAssignmentDocumentSchema.parse(document.data());
     return isCurrent(data, now);
   });
+
   const snapshots = new Map<
     string,
     { assignmentIds: string[]; responsibilities: Set<string>; teamIds: Set<string> }
   >();
+
   current.forEach((document) => {
-    const data = document.data() as {
-      teammateUserId: string;
-      responsibilities: string[];
-      teamId: string;
-    };
+    const data = teammateAssignmentDocumentSchema.parse(document.data());
     const value = snapshots.get(data.teammateUserId) ?? {
       assignmentIds: [],
       responsibilities: new Set<string>(),
@@ -361,6 +380,7 @@ export async function startFeedbackCycle(
     value.teamIds.add(data.teamId);
     snapshots.set(data.teammateUserId, value);
   });
+
   if (!snapshots.size) throw new Error("There are no current teammates to review.");
 
   const names = new Map(
@@ -369,13 +389,15 @@ export async function startFeedbackCycle(
         const user = await adminFirestore.collection("users").doc(userId).get();
         return [
           userId,
-          (user.data()?.displayName as string) ?? "Unknown teammate",
+          user.exists ? appUserSchema.parse(user.data()).displayName : "Unknown teammate",
         ] as const;
       }),
     ),
   );
+
   const cycleRef = internshipRef.collection("feedbackCycles").doc();
   const batch = adminFirestore.batch();
+
   batch.create(cycleRef, {
     evaluationStartsAt: Timestamp.fromDate(input.evaluationStartsAt),
     evaluationEndsAt: Timestamp.fromDate(input.evaluationEndsAt),
@@ -391,6 +413,7 @@ export async function startFeedbackCycle(
     updatedAt: FieldValue.serverTimestamp(),
     updatedBy: managerId,
   });
+
   snapshots.forEach((snapshot, reviewerUserId) => {
     batch.create(cycleRef.collection("reviewers").doc(reviewerUserId), {
       reviewerUserId,
@@ -405,6 +428,7 @@ export async function startFeedbackCycle(
       updatedBy: managerId,
     });
   });
+
   await batch.commit();
   return { id: cycleRef.id };
 }
@@ -417,14 +441,18 @@ export async function updateFeedbackCycleDueDate(
 ) {
   const internshipRef = await requireManagedInternship(internshipId, managerId);
   const cycleRef = internshipRef.collection("feedbackCycles").doc(cycleId);
+
   await adminFirestore.runTransaction(async (transaction) => {
     const cycle = await transaction.get(cycleRef);
-    if (
-      !cycle.exists ||
-      feedbackCycleState(cycle.data() as CycleData) !== "collecting"
-    ) {
+    if (!cycle.exists) {
       throw new Error("Only a collecting cycle can be updated.");
     }
+
+    const cycleData = feedbackCycleDocumentSchema.parse(cycle.data());
+    if (feedbackCycleState(cycleData) !== "collecting") {
+      throw new Error("Only a collecting cycle can be updated.");
+    }
+
     transaction.update(cycleRef, {
       dueAt: dueAt ? Timestamp.fromDate(dueAt) : FieldValue.delete(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -441,14 +469,18 @@ export async function cancelFeedbackCycle(
 ) {
   const internshipRef = await requireManagedInternship(internshipId, managerId);
   const cycleRef = internshipRef.collection("feedbackCycles").doc(cycleId);
+
   await adminFirestore.runTransaction(async (transaction) => {
     const cycle = await transaction.get(cycleRef);
-    if (
-      !cycle.exists ||
-      feedbackCycleState(cycle.data() as CycleData) !== "collecting"
-    ) {
+    if (!cycle.exists) {
       throw new Error("Only a collecting cycle can be cancelled.");
     }
+
+    const cycleData = feedbackCycleDocumentSchema.parse(cycle.data());
+    if (feedbackCycleState(cycleData) !== "collecting") {
+      throw new Error("Only a collecting cycle can be cancelled.");
+    }
+
     transaction.update(cycleRef, {
       cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy: managerId,
@@ -472,6 +504,7 @@ async function writeOwnResponse(
       value as FeedbackRating,
     ]),
   );
+
   const cycleRef = adminFirestore
     .collection("internships")
     .doc(internshipId)
@@ -479,12 +512,14 @@ async function writeOwnResponse(
     .doc(cycleId);
   const reviewerRef = cycleRef.collection("reviewers").doc(reviewerUserId);
   const responseRef = cycleRef.collection("responses").doc(reviewerUserId);
+
   await adminFirestore.runTransaction(async (transaction) => {
     const [cycle, reviewer, response] = await Promise.all([
       transaction.get(cycleRef),
       transaction.get(reviewerRef),
       transaction.get(responseRef),
     ]);
+
     if (!cycle.exists || !reviewer.exists) {
       throw new AuthorizationError(
         "ROLE_REQUIRED",
@@ -492,14 +527,18 @@ async function writeOwnResponse(
         "teammate",
       );
     }
-    const cycleData = cycle.data() as CycleData;
-    const reviewerData = reviewer.data() as ReviewerData;
+
+    const cycleData = feedbackCycleDocumentSchema.parse(cycle.data());
+    const reviewerData = feedbackReviewerDocumentSchema.parse(reviewer.data());
+
     if (feedbackCycleState(cycleData) !== "collecting") {
       throw new Error("This feedback cycle is no longer collecting responses.");
     }
+
     if (reviewerData.status === "submitted") {
       throw new Error("Submitted feedback cannot be changed.");
     }
+
     assertValidFeedbackAnswers(answers, cycleData.customQuestions, submit);
 
     transaction.set(
@@ -523,6 +562,7 @@ async function writeOwnResponse(
       },
       { merge: true },
     );
+
     transaction.update(reviewerRef, {
       status: submit ? "submitted" : "draft",
       ...(submit
@@ -558,20 +598,25 @@ export async function listTeammateFeedback(
 ): Promise<TeammateFeedbackDto[]> {
   const internshipRef = adminFirestore.collection("internships").doc(internshipId);
   const cycles = await internshipRef.collection("feedbackCycles").get();
+
   const results = await Promise.all(
     cycles.docs.map(async (cycle): Promise<TeammateFeedbackDto | undefined> => {
-      const cycleData = cycle.data() as CycleData;
+      const cycleData = feedbackCycleDocumentSchema.parse(cycle.data());
       if (cycleData.cancelledAt) return undefined;
+
       const reviewer = await cycle.ref
         .collection("reviewers")
         .doc(reviewerUserId)
         .get();
+
       if (!reviewer.exists) return undefined;
-      const reviewerData = reviewer.data() as ReviewerData;
+
+      const reviewerData = feedbackReviewerDocumentSchema.parse(reviewer.data());
       const response = await cycle.ref
         .collection("responses")
         .doc(reviewerUserId)
         .get();
+
       const cycleValue = await cycleDto(cycle, false);
       const ownReviewer: ReviewerStatusDto = {
         reviewerUserId,
@@ -580,9 +625,10 @@ export async function listTeammateFeedback(
         status: reviewerData.status,
         submittedAt: reviewerData.submittedAt?.toDate().toISOString(),
         response: response.exists
-          ? answersDto(response.data() as ResponseData)
+          ? answersDto(feedbackResponseDocumentSchema.parse(response.data()))
           : answersDto(undefined),
       };
+
       return {
         cycle: {
           ...cycleValue,
@@ -598,6 +644,7 @@ export async function listTeammateFeedback(
       };
     }),
   );
+
   return results
     .filter((item): item is TeammateFeedbackDto => Boolean(item))
     .sort((a, b) =>
