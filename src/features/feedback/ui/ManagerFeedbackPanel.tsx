@@ -1,5 +1,8 @@
 "use client";
 
+import { cancelFeedbackCycle } from "@/features/feedback/api/cancelFeedbackCycle";
+import { updateFeedbackDueDate } from "@/features/feedback/api/updateFeedbackDueDate";
+import { publishFeedbackCycle } from "@/features/feedback/api/publishFeedbackCycle";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -224,19 +227,17 @@ function PublishCycle({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycle.id}/publish`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ managerRecommendation }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to publish feedback.");
+      const result = await publishFeedbackCycle({
+        internshipId,
+        cycleId: cycle.id,
+        managerRecommendation,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
+
       close();
       router.refresh();
     } catch {
@@ -334,19 +335,16 @@ function EditDueDate({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycleId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            dueAt: value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null,
-          }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to update the due date.");
+      const result = await updateFeedbackDueDate({
+        internshipId,
+        cycleId,
+        dueAt: value
+          ? new Date(`${value}T00:00:00.000Z`).toISOString()
+          : null,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
       close();
@@ -410,17 +408,14 @@ function CancelCycle({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycleId}/cancel`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ reason: reason || undefined }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to cancel the cycle.");
+      const result = await cancelFeedbackCycle({
+        internshipId,
+        cycleId,
+        reason,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
       close();
@@ -444,7 +439,11 @@ function CancelCycle({
       {(close) => (
         <form className="space-y-4" onSubmit={(event) => submit(event, close)}>
           <label className="grid gap-2 text-sm font-medium">
-            Reason <span className="font-normal text-muted-foreground">(optional)</span>
+            Reason{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}

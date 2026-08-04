@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PublishedFeedbackDto } from "@/lib/feedback/types";
 
-import { FeedbackPublicationContent } from "./FeedbackPublicationContent";
+import { FeedbackPublicationContent } from "./ui/FeedbackPublicationContent";
 
 const publication: PublishedFeedbackDto = {
   internshipId: "internship-1",
