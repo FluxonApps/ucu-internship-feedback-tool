@@ -5,7 +5,7 @@ import { Menu } from "@/components/ui/Menu";
 import { requireTeammatePage } from "@/server/assignments/page-auth";
 import { getTeammateInternshipDetail } from "@/server/assignments/service";
 import { AuthorizationError } from "@/server/authorization/errors";
-import { TeammateFeedbackPanel } from "@/features/feedback/TeammateFeedbackPanel";
+import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPanel";
 import { listTeammateFeedback } from "@/server/feedback/service";
 
 export default async function TeammateInternshipPage({
@@ -48,11 +48,14 @@ export default async function TeammateInternshipPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        <Menu
-          items={workspaceMenu}
-          label="Internship navigation"
-          className="md:flex-col md:overflow-visible"
-        />
+        {/* Зафіксоване бічне меню при скролі */}
+        <div className="md:sticky md:top-24 md:self-start">
+          <Menu
+            items={workspaceMenu}
+            label="Internship navigation"
+            className="md:flex-col md:overflow-visible"
+          />
+        </div>
         <div className="space-y-10">
           <section
             id="feedback"

@@ -2,7 +2,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Menu } from "@/components/ui/Menu";
 import { requireInternPage } from "@/server/assignments/page-auth";
 import { getCurrentInternshipForIntern } from "@/server/assignments/service";
-import { PublishedFeedbackHistory } from "@/features/feedback/PublishedFeedbackHistory";
+import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 
 export default async function InternPage() {
@@ -27,11 +27,14 @@ export default async function InternPage() {
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-          <Menu
-            items={workspaceMenu}
-            label="Intern dashboard navigation"
-            className="md:flex-col md:overflow-visible"
-          />
+          {/* Зафіксоване бічне меню при скролі */}
+          <div className="md:sticky md:top-24 md:self-start">
+            <Menu
+              items={workspaceMenu}
+              label="Intern dashboard navigation"
+              className="md:flex-col md:overflow-visible"
+            />
+          </div>
           <div className="space-y-10">
             <section
               id="feedback"
