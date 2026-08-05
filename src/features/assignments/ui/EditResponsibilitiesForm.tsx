@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
 import { teammateResponsibilities } from "@/lib/teammate-responsibilities";
+import { updateResponsibilities } from "../api/updateResponsibilities";
+
 export function EditResponsibilitiesForm({
   internshipId,
   assignmentId,
@@ -20,30 +22,32 @@ export function EditResponsibilitiesForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [responsibilities, setResponsibilities] = useState(selected);
-  function submit(event: FormEvent<HTMLFormElement>) {
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
-    return fetch(
-      `/api/manager/internships/${internshipId}/teammate-assignments/${assignmentId}`,
-      {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          responsibilities,
-        }),
-      },
-    )
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Could not save responsibilities.");
-        }
-        onSuccess?.();
-        router.refresh();
-      })
-      .catch(() => setError("Could not save responsibilities. Please try again."))
-      .finally(() => setPending(false));
+
+    try {
+      await updateResponsibilities({
+        internshipId,
+        assignmentId,
+        responsibilities,
+      });
+
+      onSuccess?.();
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Could not save responsibilities. Please try again.");
+      }
+    } finally {
+      setPending(false);
+    }
   }
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 text-sm">
       <span className="text-muted-foreground">Responsibilities:</span>

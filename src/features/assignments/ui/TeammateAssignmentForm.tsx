@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import type { ApplicationUserOption } from "@/lib/assignments/types";
 import { teammateResponsibilities } from "@/lib/teammate-responsibilities";
+import { assignTeammate } from "../api/assignTeammate";
 
 export function TeammateAssignmentForm({
   internshipId,
@@ -24,32 +25,34 @@ export function TeammateAssignmentForm({
   const [responsibilities, setResponsibilities] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError("");
-    const response = await fetch(
-      `/api/manager/internships/${internshipId}/teammate-assignments`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          teammateUserId,
-          teamId,
-          responsibilities,
-          startsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
-        }),
-      },
-    );
-    const body = await response.json();
-    if (!response.ok) {
-      setError(body.error ?? "Unable to assign teammate.");
+
+    try {
+      await assignTeammate({
+        internshipId,
+        teammateUserId,
+        teamId,
+        responsibilities,
+        startsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
+      });
+
+      onSuccess?.();
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to assign teammate.");
+      }
+    } finally {
       setSubmitting(false);
-      return;
     }
-    onSuccess?.();
-    router.refresh();
   }
+
   return (
     <form onSubmit={submit} className="grid gap-4">
       <label className="grid gap-1 text-sm font-medium">
