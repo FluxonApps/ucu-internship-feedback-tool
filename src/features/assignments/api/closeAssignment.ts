@@ -1,16 +1,13 @@
+import { APIResponse } from "./types";
+
 export interface CloseAssignmentParams {
   internshipId: string;
   assignmentId: string;
 }
 
-export interface CloseAssignmentResponse {
-  success?: boolean;
-  message?: string;
-}
-
 export async function closeAssignment(
   params: CloseAssignmentParams
-): Promise<CloseAssignmentResponse> {
+): Promise<APIResponse> {
   const response = await fetch(
     `/api/manager/internships/${params.internshipId}/teammate-assignments/${params.assignmentId}/close`,
     { method: "POST" },
@@ -22,5 +19,5 @@ export async function closeAssignment(
 
   const data = await response.json().catch(() => ({}));
 
-  return data as CloseAssignmentResponse;
+  return data as APIResponse;
 }

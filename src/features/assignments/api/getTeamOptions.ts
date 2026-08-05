@@ -1,5 +1,7 @@
 import type { TeamOption } from "@/lib/assignments/types";
-export interface GetTeamOptionsResponse {
+import { APIResponse } from "./types";
+
+export interface GetTeamOptionsResponse extends APIResponse {
   teams: TeamOption[];
 }
 
@@ -11,5 +13,6 @@ export async function getTeamOptions(): Promise<GetTeamOptionsResponse> {
   }
 
   const body = await response.json();
+
   return body as GetTeamOptionsResponse;
 }

@@ -1,16 +1,13 @@
+import { APIResponse } from "./types";
+
 export interface ProvisionUserParams {
   email: string;
   roles: string[];
 }
 
-export interface ProvisionUserResponse {
-  message?: string;
-  success?: boolean;
-}
-
 export async function provisionUser(
   params: ProvisionUserParams
-): Promise<ProvisionUserResponse> {
+): Promise<APIResponse> {
   const response = await fetch("/api/manager/users", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -23,5 +20,5 @@ export async function provisionUser(
     throw new Error(body.error ?? "Unable to provision access.");
   }
 
-  return body as ProvisionUserResponse;
+  return body as APIResponse;
 }

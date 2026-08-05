@@ -1,14 +1,13 @@
+import { APIResponse } from "./types";
+
 export interface CreateInternshipParams {
   internId: string;
   team: { teamId: string } | { newTeamName: string };
   startsAt: string;
 }
 
-export interface CreateInternshipResponse {
+export interface CreateInternshipResponse extends APIResponse {
   id: string;
-  success?: boolean;
-  message?: string;
-  error?: string;
 }
 
 export async function createInternship(
