@@ -1,7 +1,7 @@
 import {
   AssignmentActions,
   TeammateAssignmentActions,
-} from "@/features/assignments/AssignmentActions";
+} from "@/features/assignments/ui/AssignmentAction";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Menu } from "@/components/ui/Menu";
 import { requireManagerPage } from "@/server/assignments/page-auth";
