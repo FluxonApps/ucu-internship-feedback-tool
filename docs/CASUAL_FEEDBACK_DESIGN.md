@@ -2,49 +2,44 @@
 
 ## What it is
 
-A single free-text note per internship, where teammates can write informal
-feedback about an intern. Separate from official feedback — no ratings, no
-structure, no publishing step. Just one shared text box.
+A short free-text note that a mentor/teammate writes about an intern they're
+assigned to. Separate from official feedback — no ratings, no structure, no
+publishing step.
 
 ## Data model
 
-One Firestore doc per internship — no query needed, just `doc().get()`:
+Doc ID is the internship ID itself, so a lookup is `doc(internshipId).get()`
+— a direct read by a known key, not a `where()` query. The internship ID is
+already in hand wherever this is called from (it's on the page/route the
+user is looking at), so there's nothing to search for.
 
 ```
 casualFeedback/{internshipId}
 ```
 
-| Field              | Type      | Notes                              |
-| ------------------ | --------- | ----------------------------------- |
-| `internshipId`     | string    | matches doc ID                     |
-| `internId`         | string    | for authorization checks           |
-| `text`             | string    | the note itself, max ~4000 chars   |
-| `updatedAt`        | timestamp | server timestamp on every save     |
-| `lastEditedBy`     | string    | uid                                 |
-| `lastEditedByName` | string    | denormalized, for display          |
-
-No document = no note yet. Deleting sets the doc back to absent rather than
-storing an empty string.
-
-Shared DTO in `src/lib/casual-feedback/types.ts`, per the repo's existing
-convention, so client and server use the same shape.
+| Field           | Type      | Notes                                                                 |
+| ---------------- | --------- | ---------------------------------------------------------------------|
+| `internshipId`/ `internId`  | string    | matches the doc ID — this specific placement of the intern with a team |
+| `text`           | string    | the note itself, max ~4000 chars                                     |
+| `createdAt`      | timestamp | server timestamp, set once                                           |
+| `createdBy`      | string    | uid of the mentor/teammate who wrote it                              |
+| `createdByName`  | string    | denormalized, for display                                            |
 
 ## Access rule
 
-- must be `active`
-- must **not** have the `manager` role
-- **teammates**: read + write, for any intern (no per-internship assignment
-  restriction — it's org-wide)
-- **the intern themself**: read only, own casual feedback only
-- **guests**: no access
+Allow-list, not a deny-list — default is no access, and each role that
+should have access is granted explicitly:
 
-| Actor                     | Read | Write |
-| -------------------------- | :--: | :---: |
-| Guest                      | ❌   | ❌    |
-| Manager                    | ❌   | ❌    |
-| Intern (own note)          | ✅   | ❌    |
-| Teammate                   | ✅   | ✅    |
+Everyone not explicitly granted above — managers, guests, teammates who
+aren't assigned to this internship, other interns — is denied by falling
+through, not by name-checking a role to exclude.
+
+| Actor                                | Read | Write |
+| -------------------------------------- | :--: | :---: |
+| Guest                                  | ❌   | ❌    |
+| Manager                                | ❌   | ❌    |
+| Intern (own note)                      | ✅   | ❌    |
+| Assigned mentor/teammate               | ✅   | ✅   |
 
 As with the rest of the app, Firestore rules stay deny-all; enforcement is
-entirely in a server-side check, called before any read or write:
-
+entirely in a server-side check, called before any read or write.
