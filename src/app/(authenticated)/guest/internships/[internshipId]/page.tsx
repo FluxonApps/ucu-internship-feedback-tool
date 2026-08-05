@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { PublishedFeedbackHistory } from "@/features/feedback/PublishedFeedbackHistory";
+import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { requireGuestPage } from "@/server/feedback/page-auth";
 import { listGuestPublishedFeedback } from "@/server/feedback/service";
 

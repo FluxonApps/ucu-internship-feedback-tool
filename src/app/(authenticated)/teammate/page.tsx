@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { requireTeammatePage } from "@/server/assignments/page-auth";
 import { listTeammateInternships } from "@/server/assignments/service";
 
@@ -10,8 +9,7 @@ export default async function TeammatePage() {
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Internships" }]} />
+      <div className="space-y-1">
         <p className="text-sm font-medium text-[var(--brand-strong)]">
           Teammate workspace
         </p>

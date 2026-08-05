@@ -6,7 +6,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Menu } from "@/components/ui/Menu";
 import { requireManagerPage } from "@/server/assignments/page-auth";
 import { getManagedInternshipDetail } from "@/server/assignments/service";
-import { ManagerFeedbackPanel } from "@/features/feedback/ManagerFeedbackPanel";
+import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
 import { listManagerFeedbackCycles } from "@/server/feedback/service";
 
 function dateLabel(value: { toDate(): Date } | undefined) {

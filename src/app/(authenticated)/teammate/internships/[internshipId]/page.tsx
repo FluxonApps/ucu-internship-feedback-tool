@@ -5,7 +5,7 @@ import { Menu } from "@/components/ui/Menu";
 import { requireTeammatePage } from "@/server/assignments/page-auth";
 import { getTeammateInternshipDetail } from "@/server/assignments/service";
 import { AuthorizationError } from "@/server/authorization/errors";
-import { TeammateFeedbackPanel } from "@/features/feedback/TeammateFeedbackPanel";
+import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPanel";
 import { listTeammateFeedback } from "@/server/feedback/service";
 
 export default async function TeammateInternshipPage({
