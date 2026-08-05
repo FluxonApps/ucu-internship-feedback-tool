@@ -1,5 +1,8 @@
 "use client";
 
+import { cancelFeedbackCycle } from "@/features/feedback/api/cancelFeedbackCycle";
+import { updateFeedbackDueDate } from "@/features/feedback/api/updateFeedbackDueDate";
+import { publishFeedbackCycle } from "@/features/feedback/api/publishFeedbackCycle";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -100,20 +103,30 @@ function CycleCard({
             {reviewer.response ? (
               <div className="mt-4 space-y-4 text-sm">
                 {feedbackMatrices.map((matrix) => (
-                  <div key={matrix.value}>
-                    <p className="font-medium">{matrix.label}</p>
-                    <dl className="mt-2 grid gap-1">
+                  <div key={matrix.value} className="space-y-2">
+                    {/* Чітко виділений заголовок секції */}
+                    <div className="border-b pb-1">
+                      <h4 className="font-semibold text-foreground">
+                        {matrix.label}
+                      </h4>
+                    </div>
+                    {/* Список критеріїв із пунктирною лінією */}
+                    <dl className="grid gap-1.5 pt-1">
                       {matrix.criteria.map((criterion) => {
                         const score = reviewer.response?.ratings[criterion.value];
+                        const ratingLabel =
+                          feedbackRatings.find((item) => item.value === score)
+                            ?.label ?? "—";
                         return (
                           <div
                             key={criterion.value}
-                            className="flex justify-between gap-4"
+                            className="flex items-baseline justify-between gap-2"
                           >
-                            <dt>{criterion.label}</dt>
-                            <dd>
-                              {feedbackRatings.find((item) => item.value === score)
-                                ?.label ?? "—"}
+                            <dt className="text-muted-foreground">{criterion.label}</dt>
+                            {/* Пунктирна лінія, що з'єднує назву критерію та відповідь */}
+                            <div className="flex-1 border-b border-dashed border-border/60 mx-1" />
+                            <dd className="font-medium shrink-0 text-foreground">
+                              {ratingLabel}
                             </dd>
                           </div>
                         );
@@ -121,6 +134,8 @@ function CycleCard({
                     </dl>
                   </div>
                 ))}
+
+                {/* Оригінальний формат для текстових питань */}
                 <p>
                   <strong>What the intern was doing well:</strong>{" "}
                   {reviewer.response.positiveFeedback}
@@ -224,19 +239,17 @@ function PublishCycle({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycle.id}/publish`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ managerRecommendation }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to publish feedback.");
+      const result = await publishFeedbackCycle({
+        internshipId,
+        cycleId: cycle.id,
+        managerRecommendation,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
+
       close();
       router.refresh();
     } catch {
@@ -334,19 +347,16 @@ function EditDueDate({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycleId}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            dueAt: value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null,
-          }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to update the due date.");
+      const result = await updateFeedbackDueDate({
+        internshipId,
+        cycleId,
+        dueAt: value
+          ? new Date(`${value}T00:00:00.000Z`).toISOString()
+          : null,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
       close();
@@ -410,17 +420,14 @@ function CancelCycle({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(
-        `/api/manager/internships/${internshipId}/feedback-cycles/${cycleId}/cancel`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ reason: reason || undefined }),
-        },
-      );
-      const body = await response.json();
-      if (!response.ok) {
-        setError(body.error ?? "Unable to cancel the cycle.");
+      const result = await cancelFeedbackCycle({
+        internshipId,
+        cycleId,
+        reason,
+      });
+
+      if (result.error) {
+        setError(result.error);
         return;
       }
       close();
@@ -444,7 +451,11 @@ function CancelCycle({
       {(close) => (
         <form className="space-y-4" onSubmit={(event) => submit(event, close)}>
           <label className="grid gap-2 text-sm font-medium">
-            Reason <span className="font-normal text-muted-foreground">(optional)</span>
+            Reason{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}

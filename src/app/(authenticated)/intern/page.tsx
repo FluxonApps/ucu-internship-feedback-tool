@@ -1,8 +1,7 @@
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Menu } from "@/components/ui/Menu";
 import { requireInternPage } from "@/server/assignments/page-auth";
 import { getCurrentInternshipForIntern } from "@/server/assignments/service";
-import { PublishedFeedbackHistory } from "@/features/feedback/PublishedFeedbackHistory";
+import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 
 export default async function InternPage() {
@@ -18,8 +17,7 @@ export default async function InternPage() {
 
   return (
     <section className="space-y-7">
-      <div className="space-y-2">
-        <Breadcrumbs items={[{ label: "Intern dashboard" }]} />
+      <div className="space-y-1">
         <p className="text-sm font-medium text-[var(--brand-strong)]">
           Intern workspace
         </p>

@@ -1,8 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { CreateInternshipDialog } from "@/features/assignments/ui/CreateInternshipDialog";
+import { CreateInternshipDialog } from "@/features/assignments/CreateInternshipDialog";
 import {
   listAvailableInterns,
   listManagedInternships,
@@ -18,8 +17,7 @@ export default async function ManagerInternshipsPage() {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Breadcrumbs items={[{ label: "Internships" }]} />
+        <div className="space-y-1">
           <p className="text-sm font-medium text-[var(--brand-strong)]">
             Manager workspace
           </p>
