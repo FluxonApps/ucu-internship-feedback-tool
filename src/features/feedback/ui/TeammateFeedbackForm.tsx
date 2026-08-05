@@ -175,39 +175,52 @@ export function TeammateFeedbackForm({
         onChange={setConstructiveFeedback}
       />
 
-      <details className="rounded-xl bg-muted/40 p-4">
-        <summary className="cursor-pointer font-medium">
-          What the manager should know or act on
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            Optional · visible to assigned managers only
-          </span>
-        </summary>
+      {item.cycle.customQuestions.length > 0 ? (
+        <section className="space-y-3">
+          <h4 className="text-sm font-semibold text-muted-foreground">
+            Additional questions
+          </h4>
 
-        <label className="mt-3 grid gap-2 text-sm font-medium">
-          Details for the manager
+          {item.cycle.customQuestions.map((question) => (
+            <TextArea
+              key={question.id}
+              label={question.prompt}
+              required
+              value={customAnswers[question.id] ?? ""}
+              onChange={(value) =>
+                setCustomAnswers((current) => ({
+                  ...current,
+                  [question.id]: value,
+                }))
+              }
+            />
+          ))}
+        </section>
+      ) : null}
 
-          <textarea
-            value={managerOnlyFeedback}
-            onChange={(event) => setManagerOnlyFeedback(event.target.value)}
-            className="min-h-28 rounded-xl border bg-background p-3"
-          />
-        </label>
-      </details>
+      <section className="space-y-2 rounded-lg border border-dashed bg-background/70 p-3">
+        <div>
+          <p className="font-medium">Manager-only notes</p>
+          <p className="text-xs text-muted-foreground">
+            Visible only to assigned managers.
+          </p>
+        </div>
 
-      {item.cycle.customQuestions.map((question) => (
-        <TextArea
-          key={question.id}
-          label={question.prompt}
-          required
-          value={customAnswers[question.id] ?? ""}
-          onChange={(value) =>
-            setCustomAnswers((current) => ({
-              ...current,
-              [question.id]: value,
-            }))
-          }
-        />
-      ))}
+        <details>
+          <summary className="cursor-pointer font-medium">
+            What the manager should know or act on
+          </summary>
+
+          <label className="mt-3 grid gap-2 text-sm font-medium">
+            Details for the manager
+            <textarea
+              value={managerOnlyFeedback}
+              onChange={(event) => setManagerOnlyFeedback(event.target.value)}
+              className="min-h-28 rounded-xl border bg-background p-3"
+            />
+          </label>
+        </details>
+      </section>
 
       {error ? (
         <p role="alert" className="text-sm text-destructive">
