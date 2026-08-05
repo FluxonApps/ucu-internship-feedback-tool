@@ -21,8 +21,11 @@ flowchart TD
 ```
 
 Core Components
+
 Frontend
-Name: Next.js Web Application
+
+Name: Next.js 
+Web Application
 
 Description:
 
