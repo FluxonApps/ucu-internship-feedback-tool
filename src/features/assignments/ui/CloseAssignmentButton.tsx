@@ -20,13 +20,17 @@ export function CloseAssignmentButton({
 
   function close() {
     setPending(true);
-    closeAssignment(internshipId, assignmentId)
+    closeAssignment({ internshipId, assignmentId })
       .then(() => {
         onSuccess?.();
         router.refresh();
       })
-      .catch((error) => {
-        console.error(error);
+      .catch((error: unknown) => {
+        if (error instanceof Error) {
+          console.error(error.message);
+        } else {
+          console.error("An unexpected error occurred", error);
+        }
       })
       .finally(() => setPending(false));
   }

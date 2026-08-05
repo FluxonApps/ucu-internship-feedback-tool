@@ -1,11 +1,20 @@
-export async function provisionUser(email: string, roles: string[]) {
+export interface ProvisionUserParams {
+  email: string;
+  roles: string[];
+}
+
+export interface ProvisionUserResponse {
+  message?: string;
+  success?: boolean;
+}
+
+export async function provisionUser(
+  params: ProvisionUserParams
+): Promise<ProvisionUserResponse> {
   const response = await fetch("/api/manager/users", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      email,
-      roles,
-    }),
+    body: JSON.stringify(params),
   });
 
   const body = await response.json();
@@ -14,5 +23,5 @@ export async function provisionUser(email: string, roles: string[]) {
     throw new Error(body.error ?? "Unable to provision access.");
   }
 
-  return body;
+  return body as ProvisionUserResponse;
 }

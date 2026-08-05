@@ -19,10 +19,14 @@ export function ProvisionUserForm() {
     setError("");
 
     try {
-      await provisionUser(email, roles);
+      await provisionUser({ email, roles });
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Unable to provision access.");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to provision access.");
+      }
     } finally {
       setPending(false);
     }

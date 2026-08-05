@@ -48,8 +48,12 @@ export function CreateInternshipForm({
       onSuccess?.();
       router.push(`/manager/internships/${body.id}`);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Unable to create the internship.");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to create the internship.");
+      }
     } finally {
       setSubmitting(false);
     }
