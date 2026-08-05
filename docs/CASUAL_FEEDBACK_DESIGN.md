@@ -6,6 +6,10 @@ A short free-text note that a mentor/teammate writes about an intern they're
 assigned to. Separate from official feedback — no ratings, no structure, no
 publishing step.
 
+## UI
+
+In the left tab, betwwen feedback and 1:1 preparation option, there will be a casual feedback option, it will have one text poll. Casual feedback tab will be on teammates and interns roles. Casual feedback tab should have a heading, date selection and text poll. Below, there should all of the past tabs with notes writen. When you click on the tab, you should see the content of the note.
+
 ## Data model
 
 Doc ID is the internship ID itself, so a lookup is `doc(internshipId).get()`
