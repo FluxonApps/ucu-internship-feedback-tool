@@ -1,11 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
+
 import {
   auditFieldsSchema,
   firestoreTimestampSchema,
-  teammateResponsibilitySchema
-} from "@/server/assignments/models";
+  teammateResponsibilitySchema,
+} from "@/server/shared/models";
 
 export const customFeedbackQuestionSchema = z.object({
   id: z.string().min(1),
