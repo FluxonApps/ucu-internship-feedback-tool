@@ -59,8 +59,7 @@ export default async function AssignmentDetailPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        {/* Зафіксоване бічне меню при скролі */}
-        <div className="md:sticky md:top-24 md:self-start">
+        <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
           <Menu
             items={workspaceMenu}
             label="Internship navigation"
