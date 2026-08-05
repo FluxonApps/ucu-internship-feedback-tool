@@ -2,7 +2,8 @@
 
 This document provides an overview of the project's architecture, directory organization, and architectural principles. It is intended to help contributors quickly understand the codebase, navigate its structure, and maintain consistency as the project evolves. 
 
-High-Level System Diagram
+## 2. High-Level System Diagram
+
                    ┌──────────────────────┐
                    │        Users         │
                    └──────────┬───────────┘
