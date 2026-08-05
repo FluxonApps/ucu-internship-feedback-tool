@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-import { Button } from "@/components/ui/Button";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ProvisionUserForm } from "@/features/assignments/ProvisionUserForm";
 import { requireManagerPage } from "@/server/assignments/page-auth";
 import { listEligibleUsers } from "@/server/assignments/service";
@@ -13,23 +11,20 @@ export default async function PeoplePage() {
   ]);
   return (
     <section className="max-w-2xl space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--brand-strong)]">
-            Manager workspace
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">People &amp; Access</h1>
-          <p className="mt-2 text-muted-foreground">
-            Provision interns and teammates before their first sign-in.
-          </p>
-        </div>
-        <Button
-          nativeButton={false}
-          render={<Link href="/manager/internships" />}
-          variant="outline"
-        >
-          Internships
-        </Button>
+      <div className="space-y-1">
+        <Breadcrumbs
+          items={[
+            { label: "Internships", href: "/manager/internships" },
+            { label: "People & Access" },
+          ]}
+        />
+        <p className="text-sm font-medium text-[var(--brand-strong)]">
+          Manager workspace
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">People &amp; Access</h1>
+        <p className="mt-2 text-muted-foreground">
+          Provision interns and teammates before their first sign-in.
+        </p>
       </div>
       <ProvisionUserForm />
       <div className="grid gap-4 sm:grid-cols-2">
