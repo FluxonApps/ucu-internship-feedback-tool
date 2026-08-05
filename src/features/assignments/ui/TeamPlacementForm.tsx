@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
 import type { TeamOption } from "@/lib/assignments/types";
+import { getTeamOptions } from "../api/getTeamOptions";
+import { createTeamPlacement } from "../api/createTeamPlacement";
 
 export function TeamPlacementForm({
   internshipId,
@@ -19,38 +21,42 @@ export function TeamPlacementForm({
   const [startsAt, setStartsAt] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
   useEffect(() => {
-    void fetch("/api/manager/team-options")
-      .then((response) => response.json())
-      .then((body) => setTeams(body.teams ?? []));
+    getTeamOptions()
+      .then((body) => setTeams(body.teams ?? []))
+      .catch(console.error);
   }, []);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError("");
+
     const match = teams.find(
       (team) => team.title.toLowerCase() === teamName.trim().toLowerCase(),
     );
-    const response = await fetch(
-      `/api/manager/internships/${internshipId}/team-placements`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          team: match ? { teamId: match.id } : { newTeamName: teamName },
-          startsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
-        }),
-      },
-    );
-    const body = await response.json();
-    if (!response.ok) {
-      setError(body.error ?? "Unable to add Team Placement.");
+
+    try {
+      await createTeamPlacement({
+        internshipId,
+        team: match ? { teamId: match.id } : { newTeamName: teamName },
+        startsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
+      });
+
+      onSuccess?.();
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to add Team Placement.");
+      }
+    } finally {
       setPending(false);
-      return;
     }
-    onSuccess?.();
-    router.refresh();
   }
+
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
       <label className="grid gap-1 text-sm font-medium">

@@ -1,6 +1,15 @@
-export async function closeAssignment(internshipId: string, assignmentId: string) {
+import { APIResponse } from "./types";
+
+export interface CloseAssignmentParams {
+  internshipId: string;
+  assignmentId: string;
+}
+
+export async function closeAssignment(
+  params: CloseAssignmentParams
+): Promise<APIResponse> {
   const response = await fetch(
-    `/api/manager/internships/${internshipId}/teammate-assignments/${assignmentId}/close`,
+    `/api/manager/internships/${params.internshipId}/teammate-assignments/${params.assignmentId}/close`,
     { method: "POST" },
   );
 
@@ -8,5 +17,7 @@ export async function closeAssignment(internshipId: string, assignmentId: string
     throw new Error("Could not end assignment.");
   }
 
-  return response;
+  const data = await response.json().catch(() => ({}));
+
+  return data as APIResponse;
 }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
 import type { ApplicationUserOption, TeamOption } from "@/lib/assignments/types";
+import { getTeamOptions } from "../api/getTeamOptions";
+import { createInternship } from "../api/createInternship";
 
 export function CreateInternshipForm({
   interns,
@@ -22,36 +24,39 @@ export function CreateInternshipForm({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/manager/team-options")
-      .then((response) => response.json())
-      .then((body) => setTeams(body.teams ?? []));
+    getTeamOptions()
+      .then((body) => setTeams(body.teams ?? []))
+      .catch(console.error);
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError("");
+
     const matchedTeam = teams.find(
       (team) => team.title.toLowerCase() === teamName.trim().toLowerCase(),
     );
-    const response = await fetch("/api/manager/internships", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+
+    try {
+      const body = await createInternship({
         internId,
         team: matchedTeam ? { teamId: matchedTeam.id } : { newTeamName: teamName },
         startsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
-      }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setError(body.error ?? "Unable to create the internship.");
+      });
+
+      onSuccess?.();
+      router.push(`/manager/internships/${body.id}`);
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unable to create the internship.");
+      }
+    } finally {
       setSubmitting(false);
-      return;
     }
-    onSuccess?.();
-    router.push(`/manager/internships/${body.id}`);
-    router.refresh();
   }
 
   return (
