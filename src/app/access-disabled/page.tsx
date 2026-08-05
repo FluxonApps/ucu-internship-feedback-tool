@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 
-import { SignOutButton } from "@/features/auth/SignOutButton";
+import { SignOutButton } from "@/features/auth/ui/SignOutButton";
 import { getAuthorizationContext } from "@/server/authorization/context";
 import { getOptionalAuthenticatedUser } from "@/server/auth/require-user";
 

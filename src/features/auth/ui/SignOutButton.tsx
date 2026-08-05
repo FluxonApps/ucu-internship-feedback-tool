@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "firebase/auth";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import { getFirebaseClientAuth } from "@/lib/firebase/client";
+import { performSignOut } from "../api/signOut";
 
 export function SignOutButton() {
   const [pending, setPending] = useState(false);
@@ -16,11 +15,7 @@ export function SignOutButton() {
     setError(undefined);
 
     try {
-      const response = await fetch("/api/auth/sign-out", { method: "POST" });
-      if (!response.ok) {
-        throw new Error("Unable to end the server session.");
-      }
-      await signOut(getFirebaseClientAuth()).catch(() => undefined);
+      await performSignOut();
       window.location.assign("/sign-in");
     } catch (signOutError) {
       setError(
