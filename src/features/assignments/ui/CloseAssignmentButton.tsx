@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/Button";
+import { closeAssignment } from "../api/closeAssignment";
 
 export function CloseAssignmentButton({
   internshipId,
@@ -16,21 +17,20 @@ export function CloseAssignmentButton({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+
   function close() {
     setPending(true);
-    return fetch(
-      `/api/manager/internships/${internshipId}/teammate-assignments/${assignmentId}/close`,
-      { method: "POST" },
-    )
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Could not end assignment.");
-        }
+    closeAssignment(internshipId, assignmentId)
+      .then(() => {
         onSuccess?.();
         router.refresh();
       })
+      .catch((error) => {
+        console.error(error);
+      })
       .finally(() => setPending(false));
   }
+
   return (
     <Button
       variant="outline"
