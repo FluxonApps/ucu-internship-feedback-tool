@@ -13,48 +13,76 @@ export function FeedbackProgressComparison({
   currentRatings,
 }: FeedbackProgressComparisonProps) {
   return (
-    <div className="space-y-6">
-      {feedbackMatrices.map((matrix) => (
-        <section key={matrix.value}>
-          <h3 className="font-semibold">{matrix.label}</h3>
+    <details className="rounded-xl bg-muted/30 p-4">
+      <summary className="cursor-pointer font-semibold">
+        View feedback progress
+      </summary>
 
-          <div className="mt-3 space-y-2">
-            {matrix.criteria.map((criterion) => {
-              const previous = previousRatings[criterion.value];
-              const current = currentRatings[criterion.value];
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+        {feedbackMatrices.map((matrix) => (
+          <section
+            key={matrix.value}
+            className="rounded-xl bg-muted/35 p-5"
+          >
+            <h4 className="font-semibold">{matrix.label}</h4>
 
-              if (previous === undefined || current === undefined) {
-                return null;
-              }
+            <dl className="mt-3 grid gap-2 text-sm">
+              {matrix.criteria.map((criterion) => {
+                const previous = previousRatings[criterion.value];
+                const current = currentRatings[criterion.value];
 
-              const difference = current - previous;
+                if (previous === undefined || current === undefined) {
+                  return null;
+                }
 
-              return (
-                <div
-                  key={criterion.value}
-                  className="flex items-center justify-between gap-4 rounded-lg bg-muted/30 px-4 py-3"
-                >
-                  <span>{criterion.label}</span>
+                const difference = current - previous;
 
-                  <span className="font-medium">
-                    {previous.toFixed(1)}
-                    <span className="mx-2 text-muted-foreground">→</span>
-                    {current.toFixed(1)}
+                return (
+                  <div
+                    key={criterion.value}
+                    className="flex items-start justify-between gap-4"
+                  >
+                    <dt>{criterion.label}</dt>
 
-                    {difference > 0 ? (
-                      <span className="ml-2 text-green-600">↑</span>
-                    ) : difference < 0 ? (
-                      <span className="ml-2 text-red-600">↓</span>
-                    ) : (
-                      <span className="ml-2 text-muted-foreground">→</span>
-                    )}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-    </div>
+                    <dd className="text-right font-medium">
+                      {difference === 0 ? (
+                        current.toFixed(1)
+                      ) : (
+                        <>
+                          {previous.toFixed(1)}
+                          <span className="mx-2 text-muted-foreground">
+                            →
+                          </span>
+
+                          <span
+                            className={
+                              difference > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }
+                          >
+                            {current.toFixed(1)}
+                          </span>
+
+                          <span
+                            className={`ml-2 ${
+                              difference > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {difference > 0 ? "↑" : "↓"}
+                          </span>
+                        </>
+                      )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </section>
+        ))}
+      </div>
+    </details>
   );
 }
