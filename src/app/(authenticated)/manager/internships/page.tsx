@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
-import { CreateInternshipDialog } from "@/features/assignments/CreateInternshipDialog";
+import { CreateInternshipDialog } from "@/features/assignments/ui/CreateInternshipDialog";
 import {
   listAvailableInterns,
   listManagedInternships,
