@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import type { ApplicationUserOption } from "@/lib/assignments/types";
 import { CloseAssignmentButton } from "../ui/CloseAssignmentButton";
 import { EditResponsibilitiesForm } from "../EditResponsibilitiesForm";
-import { TeamPlacementForm } from "../TeamPlacementForm";
+import { TeamPlacementForm } from "./TeamPlacementForm";
 import { TeammateAssignmentForm } from "../TeammateAssignmentForm";
 
 export function AssignmentActions({
