@@ -24,6 +24,7 @@ export function TeammateAssignmentForm({
   const [responsibilities, setResponsibilities] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -50,6 +51,7 @@ export function TeammateAssignmentForm({
     onSuccess?.();
     router.refresh();
   }
+
   return (
     <form onSubmit={submit} className="grid gap-4">
       <label className="grid gap-1 text-sm font-medium">
@@ -59,7 +61,7 @@ export function TeammateAssignmentForm({
           required
           value={teammateUserId}
           onChange={(event) => setTeammateUserId(event.target.value)}
-          className="h-10 rounded-lg border bg-background px-3"
+          className="h-10 w-full min-w-0 max-w-full truncate rounded-lg border bg-background px-3"
         >
           <option value="">Select teammate</option>
           {teammates.map((person) => (
@@ -77,14 +79,14 @@ export function TeammateAssignmentForm({
           required
           value={startsAt}
           onChange={(event) => setStartsAt(event.target.value)}
-          className="h-10 rounded-lg border bg-background px-3"
+          className="h-10 w-full min-w-0 max-w-full rounded-lg border bg-background px-3"
         />
       </label>
       <fieldset className="grid gap-1 text-sm font-medium">
         <legend>Responsibilities</legend>
         <div className="flex flex-wrap gap-3 pt-1 text-sm font-normal">
           {teammateResponsibilities.map((responsibility) => (
-            <label key={responsibility.value} className="flex items-center gap-1">
+            <label key={responsibility.value} className="flex items-center gap-1.5 cursor-pointer">
               <input
                 name="responsibilities"
                 type="checkbox"
