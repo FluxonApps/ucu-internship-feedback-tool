@@ -4,28 +4,21 @@ This document provides an overview of the project's architecture, directory orga
 
 ## 2. High-Level System Diagram
 
-                   ┌──────────────────────┐
-                   │        Users         │
-                   └──────────┬───────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Next.js Application    │
-                  ├────────────────────────┤
-                  │ Server Components      │
-                  │ Client Components      │
-                  └──────────┬─────────────┘
-                             │
-          ┌──────────────────┴──────────────────┐
-          ▼                                     ▼
- ┌──────────────────┐                 ┌───────────────────┐
- │ Firebase Admin   │                 │ Firebase Client   │
- │ (Server Layer)   │                 │ SDK (Client)      │
- └─────────┬────────┘                 └─────────┬─────────┘
-           │                                    │
-           └──────────────────┬─────────────────┘
-                              ▼
-                        Firebase Services
+            ## 2. High-Level System Diagram
+
+```mermaid
+flowchart TD
+    U[Users] --> A[Next.js Application]
+
+    A --> SC[Server Components]
+    A --> CC[Client Components]
+
+    SC --> FA[Firebase Admin SDK]
+    CC --> FC[Firebase Client SDK]
+
+    FA --> DB[Firebase Services]
+    FC --> DB
+```
 
 Core Components
 Frontend
