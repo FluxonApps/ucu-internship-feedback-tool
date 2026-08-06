@@ -7,6 +7,7 @@ import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedba
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
 import { listCasualFeedbackForIntern } from "@/server/casual-feedback/service";
+import { AnalyticsPanel } from "@/features/feedback/ui/AnalyticsPanel";
 
 import { getInternAchievements } from "@/server/achievements/service";
 import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
@@ -27,6 +28,14 @@ export default async function InternPage() {
       getInternAchievements(internship.id),
     ]);
   }
+
+  const workspaceMenu = [
+    { href: "#feedback", label: "Feedback" },
+    { href: "#casual-feedback", label: "Casual Feedback" },
+    { href: "#achievements", label: "Achievements" },
+    { href: "#analytics", label: "Analytics" },
+    { href: "#one-on-one-preparation", label: "1:1 Preparation" },
+  ];
 
   const latestPublication = publications.length > 0 ? publications[0] : null;
 
