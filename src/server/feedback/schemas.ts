@@ -35,3 +35,21 @@ export const feedbackAnswersInputSchema = z.object({
 });
 
 export type FeedbackAnswersInput = z.infer<typeof feedbackAnswersInputSchema>;
+
+export const createFeedbackScheduleInputSchema = z.object({
+  type: z.enum(["automatic", "reminder"]),
+  triggerAt: z.coerce.date(),
+  cycleTemplate: z.object({
+    evaluationStartsAt: z.coerce.date(),
+    evaluationEndsAt: z.coerce.date(),
+    dueAt: z.coerce.date().optional(),
+    customQuestions: z.array(
+      z.object({
+        id: z.string().min(1),
+        prompt: z.string().min(1),
+      })
+    ),
+  }),
+});
+
+export type CreateFeedbackScheduleInput = z.infer<typeof createFeedbackScheduleInputSchema>;

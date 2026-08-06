@@ -57,3 +57,28 @@ export const feedbackResponseDocumentSchema = auditFieldsSchema.extend({
 });
 
 export type FeedbackResponseDocument = z.infer<typeof feedbackResponseDocumentSchema>;
+
+export const feedbackScheduleTypeSchema = z.enum(["automatic", "reminder"]);
+export const feedbackScheduleStatusSchema = z.enum(["pending", "processed", "cancelled"]);
+
+export const feedbackScheduleDocumentSchema = auditFieldsSchema.extend({
+  type: feedbackScheduleTypeSchema,
+
+  status: feedbackScheduleStatusSchema,
+
+  triggerAt: firestoreTimestampSchema,
+
+  cycleTemplate: z.object({
+    evaluationStartsAt: firestoreTimestampSchema,
+    evaluationEndsAt: firestoreTimestampSchema,
+    dueAt: firestoreTimestampSchema.optional(),
+    customQuestions: z.array(customFeedbackQuestionSchema),
+  }),
+
+  processedAt: firestoreTimestampSchema.optional(),
+
+  cancelledAt: firestoreTimestampSchema.optional(),
+  cancelledBy: z.string().min(1).optional(),
+});
+
+export type FeedbackScheduleDocument = z.infer<typeof feedbackScheduleDocumentSchema>;

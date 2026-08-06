@@ -34,7 +34,11 @@ import {
 import { appUserSchema } from "@/server/users/app-user";
 
 import { assertValidEvaluationRange, assertValidFeedbackAnswers } from "./domain";
-import type { createFeedbackCycleInputSchema, FeedbackAnswersInput } from "./schemas";
+import type {
+  createFeedbackCycleInputSchema,
+  createFeedbackScheduleInputSchema,
+  FeedbackAnswersInput
+} from "./schemas";
 
 
 async function requireManagedInternship(internshipId: string, managerId: string) {
@@ -650,4 +654,149 @@ export async function listTeammateFeedback(
     .sort((a, b) =>
       b.cycle.evaluationStartsAt.localeCompare(a.cycle.evaluationStartsAt),
     );
+}
+
+export async function scheduleFeedbackCycle(
+  internshipId: string,
+  managerId: string,
+  input: z.infer<typeof createFeedbackScheduleInputSchema>,
+) {
+  assertValidEvaluationRange(
+    input.cycleTemplate.evaluationStartsAt,
+    input.cycleTemplate.evaluationEndsAt
+  );
+
+  const internshipRef = await requireManagedInternship(internshipId, managerId);
+
+  const scheduleRef = internshipRef.collection("feedbackSchedules").doc();
+
+  await scheduleRef.set({
+    type: input.type,
+    status: "pending",
+    triggerAt: Timestamp.fromDate(input.triggerAt),
+
+    cycleTemplate: {
+      evaluationStartsAt: Timestamp.fromDate(input.cycleTemplate.evaluationStartsAt),
+      evaluationEndsAt: Timestamp.fromDate(input.cycleTemplate.evaluationEndsAt),
+      ...(input.cycleTemplate.dueAt ? { dueAt: Timestamp.fromDate(input.cycleTemplate.dueAt) } : {}),
+      customQuestions: input.cycleTemplate.customQuestions,
+    },
+
+    createdAt: FieldValue.serverTimestamp(),
+    createdBy: managerId,
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: managerId,
+  });
+
+  return { id: scheduleRef.id };
+}
+
+export async function processPendingFeedbackSchedules() {
+  const now = new Date();
+
+  const internshipsSnapshot = await adminFirestore.collection("internships").get();
+
+  if (internshipsSnapshot.empty) {
+    console.log("No internships found.");
+    return;
+  }
+
+  const pendingSchedules: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+
+  for (const internshipDoc of internshipsSnapshot.docs) {
+    const schedulesSnapshot = await internshipDoc.ref.collection("feedbackSchedules").get();
+
+    for (const scheduleDoc of schedulesSnapshot.docs) {
+      const data = scheduleDoc.data();
+      if (data.status === "pending") {
+        pendingSchedules.push(scheduleDoc);
+      }
+    }
+  }
+
+  if (pendingSchedules.length === 0) {
+    console.log("No pending schedules to process at this time.");
+    return;
+  }
+
+  for (const doc of pendingSchedules) {
+    const scheduleData = doc.data();
+
+    const triggerAtDate = scheduleData.triggerAt?.toDate();
+    if (!triggerAtDate || triggerAtDate > now) {
+      continue;
+    }
+
+    const scheduleId = doc.id;
+    const internshipRef = doc.ref.parent.parent;
+
+    if (!internshipRef) continue;
+    const internshipId = internshipRef.id;
+
+    try {
+      if (scheduleData.type === "automatic") {
+        await startFeedbackCycle(internshipId, scheduleData.createdBy, {
+          evaluationStartsAt: scheduleData.cycleTemplate.evaluationStartsAt.toDate(),
+          evaluationEndsAt: scheduleData.cycleTemplate.evaluationEndsAt.toDate(),
+          dueAt: scheduleData.cycleTemplate.dueAt?.toDate(),
+          customQuestions: scheduleData.cycleTemplate.customQuestions.map((q: any) => q.prompt),
+        });
+        console.log(`[Cron] Automatically started cycle for internship ${internshipId}`);
+      }
+      else if (scheduleData.type === "reminder") {
+        console.log(`[Cron] REMINDER: Manager ${scheduleData.createdBy}, please start the cycle for internship ${internshipId}`);
+      }
+
+      await doc.ref.update({
+        status: "processed",
+        processedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: "system",
+      });
+
+    } catch (error) {
+      console.error(`[Cron] Failed to process schedule ${scheduleId} for internship ${internshipId}:`, error);
+    }
+  }
+}
+
+export async function listFeedbackSchedules(internshipId: string, managerId: string) {
+  const internshipRef = await requireManagedInternship(internshipId, managerId);
+  const schedulesSnapshot = await internshipRef.collection("feedbackSchedules").get();
+
+  return schedulesSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      type: data.type,
+      status: data.status,
+      triggerAt: data.triggerAt?.toDate().toISOString(),
+      cycleTemplate: {
+        evaluationStartsAt: data.cycleTemplate.evaluationStartsAt?.toDate().toISOString(),
+        evaluationEndsAt: data.cycleTemplate.evaluationEndsAt?.toDate().toISOString(),
+        dueAt: data.cycleTemplate.dueAt?.toDate().toISOString(),
+        customQuestions: data.cycleTemplate.customQuestions,
+      },
+    };
+  });
+}
+
+export async function cancelFeedbackSchedule(
+  internshipId: string,
+  scheduleId: string,
+  managerId: string,
+) {
+  const internshipRef = await requireManagedInternship(internshipId, managerId);
+  const scheduleRef = internshipRef.collection("feedbackSchedules").doc(scheduleId);
+
+  const doc = await scheduleRef.get();
+  if (!doc.exists) {
+    throw new Error("Schedule not found.");
+  }
+
+  await scheduleRef.update({
+    status: "cancelled",
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: managerId,
+  });
 }
