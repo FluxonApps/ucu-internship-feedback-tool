@@ -4,6 +4,7 @@ import {
   type FeedbackCriterion,
   type FeedbackRating,
 } from "./definitions";
+import { calculateHealthScore } from "./health-score";
 import type {
   FeedbackAnswersDto,
   FeedbackCycleState,
@@ -42,12 +43,27 @@ function publicAnswer(
   answer: string | undefined,
 ): PublishedAnswerDto | undefined {
   if (!answer?.trim()) return undefined;
+
+  let overallScore: number | undefined = undefined;
+  let softScore: number | undefined = undefined;
+  let techScore: number | undefined = undefined;
+
+  if (reviewer.response?.ratings) {
+    const scores = calculateHealthScore(reviewer.response.ratings);
+    overallScore = scores.overallAverage;
+    softScore = scores.softAverage;
+    techScore = scores.technicalAverage;
+  }
+
   return {
     reviewerUserId: reviewer.reviewerUserId,
     reviewerDisplayName: reviewer.reviewerDisplayName,
     responsibilities: reviewer.responsibilities,
     answer,
-  };
+    overallScore,
+    softScore,
+    techScore,
+  } as PublishedAnswerDto & { overallScore?: number; softScore?: number; techScore?: number };
 }
 
 export function buildFeedbackPublicationPreview(

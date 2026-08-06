@@ -4,6 +4,8 @@ import { getCurrentInternshipForIntern } from "@/server/assignments/service";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 
+import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
+
 export default async function InternPage() {
   const context = await requireInternPage();
   const internship = await getCurrentInternshipForIntern(context.userId);
@@ -15,6 +17,8 @@ export default async function InternPage() {
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
+  const latestPublication = publications.length > 0 ? publications[0] : null;
+
   return (
     <section className="space-y-7">
       <div className="space-y-1">
@@ -25,7 +29,6 @@ export default async function InternPage() {
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-          {/* Зафіксоване бічне меню при скролі */}
           <div className="md:sticky md:top-24 md:self-start">
             <Menu
               items={workspaceMenu}
@@ -34,18 +37,25 @@ export default async function InternPage() {
             />
           </div>
           <div className="space-y-10">
-            <section
-              id="feedback"
-              className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
-            >
+
+            <section id="feedback" className="scroll-mt-24 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold">Feedback</h2>
+                <h2 className="text-2xl font-semibold">Feedback</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Review feedback that has been published for your internship.
                 </p>
               </div>
-              <PublishedFeedbackHistory publications={publications} />
+
+              {latestPublication && (
+                <HealthScoreSection publication={latestPublication} />
+              )}
+
+              <div className="space-y-4 rounded-2xl border bg-card p-6">
+                <h3 className="text-lg font-semibold">Feedback History</h3>
+                <PublishedFeedbackHistory publications={publications} />
+              </div>
             </section>
+
             <section
               id="one-on-one-preparation"
               className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"

@@ -5,6 +5,8 @@ import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedba
 import { requireGuestPage } from "@/server/feedback/page-auth";
 import { listGuestPublishedFeedback } from "@/server/feedback/service";
 
+import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
+
 export default async function GuestInternshipFeedbackPage({
   params,
 }: {
@@ -19,6 +21,8 @@ export default async function GuestInternshipFeedbackPage({
     notFound();
   }
   if (!publications.length) notFound();
+
+  const latestPublication = publications[0];
 
   return (
     <section className="space-y-7">
@@ -36,6 +40,11 @@ export default async function GuestInternshipFeedbackPage({
           {publications[0].internDisplayName}
         </h1>
       </div>
+
+      {latestPublication && (
+        <HealthScoreSection publication={latestPublication} />
+      )}
+
       <section className="space-y-4 rounded-2xl border bg-card p-6">
         <div>
           <h2 className="text-lg font-semibold">Feedback history</h2>
