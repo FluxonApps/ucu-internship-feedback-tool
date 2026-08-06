@@ -64,6 +64,22 @@ export async function getAvailableAchievements(): Promise<Achievement[]> {
   }));
 }
 
+export async function createCustomAchievement(params: {
+  title: string;
+  description: string;
+  icon: string;
+}): Promise<Achievement> {
+  const newAchievement: Omit<Achievement, "id"> = {
+    title: params.title,
+    description: params.description,
+    icon: params.icon,
+    isCustom: true,
+  };
+
+  const docRef = await db.collection("achievements").add(newAchievement);
+  return { id: docRef.id, ...newAchievement };
+}
+
 export async function assignAchievementToIntern(params: {
   internId: string;
   givenByUserId: string;

@@ -10,6 +10,10 @@ import { listTeammateFeedback } from "@/server/feedback/service";
 import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
 import { listCasualFeedbackForTeammate } from "@/server/casual-feedback/service";
 
+// Сервіси ачівок та UI-компонент
+import { getAvailableAchievements, getInternAchievements } from "@/server/achievements/service";
+import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
+
 export default async function TeammateInternshipPage({
   params,
 }: {
@@ -17,21 +21,37 @@ export default async function TeammateInternshipPage({
 }) {
   const { internshipId } = await params;
   const context = await requireTeammatePage();
+
   let internship: Awaited<ReturnType<typeof getTeammateInternshipDetail>>;
   let feedback: Awaited<ReturnType<typeof listTeammateFeedback>>;
   let casualFeedback: Awaited<ReturnType<typeof listCasualFeedbackForTeammate>>;
+  let availableAchievements: Awaited<ReturnType<typeof getAvailableAchievements>>;
+  let internAchievements: Awaited<ReturnType<typeof getInternAchievements>>;
+
   try {
-    [internship, feedback, casualFeedback] = await Promise.all([
+    // Паралельне завантаження даних для обох фічей
+    [
+      internship,
+      feedback,
+      casualFeedback,
+      availableAchievements,
+      internAchievements,
+    ] = await Promise.all([
       getTeammateInternshipDetail(internshipId, context.userId),
       listTeammateFeedback(internshipId, context.userId),
       listCasualFeedbackForTeammate(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
     ]);
   } catch (error) {
     if (error instanceof AuthorizationError) redirect("/forbidden");
     throw error;
   }
+
+  // Бічне меню з усіма секціями
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
+    { href: "#achievements", label: "Achievements" },
     { href: "#casual-feedback", label: "Casual Feedback" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
@@ -77,6 +97,19 @@ export default async function TeammateInternshipPage({
             <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
           </section>
 
+          {/* Секція Achievements */}
+          <section
+            id="achievements"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <AchievementsPanel
+              internshipId={internshipId}
+              availableAchievements={availableAchievements}
+              internAchievements={internAchievements}
+            />
+          </section>
+
+          {/* Секція Casual Feedback */}
           <section
             id="casual-feedback"
             className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"

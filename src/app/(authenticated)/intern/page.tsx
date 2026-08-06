@@ -7,22 +7,30 @@ import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbac
 import { listCasualFeedbackForIntern } from "@/server/casual-feedback/service";
 import Link from "next/link";
 
+import { getInternAchievements } from "@/server/achievements/service";
+import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
 import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
 
 export default async function InternPage() {
   const context = await requireInternPage();
   const internship = await getCurrentInternshipForIntern(context.userId);
+
   let publications: Awaited<ReturnType<typeof listInternPublishedFeedback>> = [];
   let casualFeedback: Awaited<ReturnType<typeof listCasualFeedbackForIntern>> = [];
+  let achievements: Awaited<ReturnType<typeof getInternAchievements>> = [];
+
   if (internship) {
-    [publications, casualFeedback] = await Promise.all([
+    [publications, casualFeedback, achievements] = await Promise.all([
       listInternPublishedFeedback(internship.id, context.userId),
       listCasualFeedbackForIntern(internship.id, context.userId),
+      getInternAchievements(internship.id),
     ]);
   }
+
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
     { href: "#casual-feedback", label: "Casual Feedback" },
+    { href: "#achievements", label: "Achievements" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -52,8 +60,7 @@ export default async function InternPage() {
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-          {/* Адаптивне зафіксоване меню без білої плашки */}
-          <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
+          <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:sticky md:top-24 md:self-start">
             <Menu
               items={workspaceMenu}
               label="Intern dashboard navigation"
@@ -61,7 +68,6 @@ export default async function InternPage() {
             />
           </div>
 
-          {/* min-w-0 запобігає вилазинню контенту в грідах */}
           <div className="min-w-0 space-y-10">
             <section
               id="feedback"
@@ -99,6 +105,19 @@ export default async function InternPage() {
                 notes={casualFeedback}
                 canWrite={false}
               />
+            </section>
+
+            <section
+              id="achievements"
+              className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+            >
+              <div>
+                <h2 className="text-lg font-semibold">Achievements</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Achievements awarded during your internship.
+                </p>
+              </div>
+              <AchievementsList achievements={achievements} />
             </section>
 
             <section
