@@ -23,6 +23,8 @@ export type ReviewerStatusDto = {
   status: "notStarted" | "draft" | "submitted";
   submittedAt?: string;
   response?: FeedbackAnswersDto;
+  softScore?: number;
+  techScore?: number;
 };
 
 export type FeedbackCycleDto = {

@@ -5,6 +5,9 @@ import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedba
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
 import { listCasualFeedbackForIntern } from "@/server/casual-feedback/service";
+import Link from "next/link";
+
+import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
 
 export default async function InternPage() {
   const context = await requireInternPage();
@@ -23,13 +26,29 @@ export default async function InternPage() {
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
+  const latestPublication = publications.length > 0 ? publications[0] : null;
+
   return (
     <section className="space-y-7">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-[var(--brand-strong)]">
-          Intern workspace
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Intern dashboard</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--brand-strong)]">
+            Intern workspace
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Intern dashboard
+          </h1>
+        </div>
+        <Link
+          href={
+            internship
+              ? `/analytics?internshipId=${internship.id}`
+              : "#"
+          }
+          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
+        >
+          View analytics
+        </Link>
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
@@ -49,12 +68,20 @@ export default async function InternPage() {
               className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
             >
               <div>
-                <h2 className="text-lg font-semibold">Feedback</h2>
+                <h2 className="text-2xl font-semibold">Feedback</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Review feedback that has been published for your internship.
                 </p>
               </div>
-              <PublishedFeedbackHistory publications={publications} />
+
+              {latestPublication && (
+                <HealthScoreSection publication={latestPublication} />
+              )}
+
+              <div className="space-y-4 rounded-2xl border bg-card p-6">
+                <h3 className="text-lg font-semibold">Feedback History</h3>
+                <PublishedFeedbackHistory publications={publications} />
+              </div>
             </section>
 
             <section
