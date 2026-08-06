@@ -8,6 +8,10 @@ import { AuthorizationError } from "@/server/authorization/errors";
 import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPanel";
 import { listTeammateFeedback } from "@/server/feedback/service";
 
+// 1. Імпортуємо сервіси ачівок та UI-компонент
+import { getAvailableAchievements, getInternAchievements } from "@/server/achievements/service";
+import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
+
 export default async function TeammateInternshipPage({
   params,
 }: {
@@ -15,19 +19,29 @@ export default async function TeammateInternshipPage({
 }) {
   const { internshipId } = await params;
   const context = await requireTeammatePage();
+
   let internship: Awaited<ReturnType<typeof getTeammateInternshipDetail>>;
   let feedback: Awaited<ReturnType<typeof listTeammateFeedback>>;
+  let availableAchievements: Awaited<ReturnType<typeof getAvailableAchievements>>;
+  let internAchievements: Awaited<ReturnType<typeof getInternAchievements>>;
+
   try {
-    [internship, feedback] = await Promise.all([
+    // 2. Додаємо паралельне завантаження ачівок
+    [internship, feedback, availableAchievements, internAchievements] = await Promise.all([
       getTeammateInternshipDetail(internshipId, context.userId),
       listTeammateFeedback(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
     ]);
   } catch (error) {
     if (error instanceof AuthorizationError) redirect("/forbidden");
     throw error;
   }
+
+  // 3. Додаємо ачівки у бічне меню для швидкої навігації
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
+    { href: "#achievements", label: "Achievements" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -70,6 +84,18 @@ export default async function TeammateInternshipPage({
               </p>
             </div>
             <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
+          </section>
+
+          {/* 4. Нова секція Achievements */}
+          <section
+            id="achievements"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <AchievementsPanel
+              internshipId={internshipId}
+              availableAchievements={availableAchievements}
+              internAchievements={internAchievements}
+            />
           </section>
 
           <section
