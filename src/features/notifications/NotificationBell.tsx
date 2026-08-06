@@ -81,7 +81,36 @@ export function NotificationBell() {
   }
   setOpen(false);
   router.push(href);
-}
+  }
+  async function markAllAsRead() {
+    const response = await fetch("/api/notifications", {
+      method: "PATCH",
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      console.error(
+        body?.error ?? "Unable to mark all notifications as read.",
+      );
+
+      return;
+    }
+
+    const readAt = new Date().toISOString();
+
+    setNotifications((current) =>
+      current.map((notification) => ({
+        ...notification,
+        readAt,
+      })),
+    );
+
+    setOpen(false);
+  }
+
   return (
     <details
     className="relative"
@@ -104,8 +133,20 @@ export function NotificationBell() {
       </summary>
 
       <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border bg-card shadow-xl">
-        <div className="border-b px-4 py-3">
+        <div className="flex items-center justify-between border-b px-4 py-3">
           <p className="font-semibold">Notifications</p>
+
+          {unreadCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                void markAllAsRead();
+              }}
+              className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
+            >
+              Mark all as read
+            </button>
+          ) : null}
         </div>
 
         <div className="max-h-96 overflow-y-auto">

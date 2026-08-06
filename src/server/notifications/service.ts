@@ -120,3 +120,32 @@ export async function markNotificationAsRead(
     });
   });
 }
+
+export async function markAllNotificationsAsRead(
+  userId: string,
+): Promise<void> {
+  const snapshot = await adminFirestore
+    .collection("notifications")
+    .where("recipientUserId", "==", userId)
+    .get();
+
+  const unreadNotifications = snapshot.docs.filter((document) => {
+    const data = document.data() as NotificationData;
+
+    return !data.readAt;
+  });
+
+  if (!unreadNotifications.length) {
+    return;
+  }
+
+  const batch = adminFirestore.batch();
+
+  unreadNotifications.forEach((document) => {
+    batch.update(document.ref, {
+      readAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+}
