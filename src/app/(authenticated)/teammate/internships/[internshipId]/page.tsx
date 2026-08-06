@@ -1,7 +1,7 @@
+import { Tabs } from "@base-ui/react/tabs";
 import { redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { Menu } from "@/components/ui/Menu";
 import { requireTeammatePage } from "@/server/assignments/page-auth";
 import { getTeammateInternshipDetail } from "@/server/assignments/service";
 import { AuthorizationError } from "@/server/authorization/errors";
@@ -9,9 +9,10 @@ import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPa
 import { listTeammateFeedback } from "@/server/feedback/service";
 import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
 import { listCasualFeedbackForTeammate } from "@/server/casual-feedback/service";
-
-// Сервіси ачівок та UI-компонент
-import { getAvailableAchievements, getInternAchievements } from "@/server/achievements/service";
+import {
+  getAvailableAchievements,
+  getInternAchievements,
+} from "@/server/achievements/service";
 import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
 
 export default async function TeammateInternshipPage({
@@ -29,32 +30,18 @@ export default async function TeammateInternshipPage({
   let internAchievements: Awaited<ReturnType<typeof getInternAchievements>>;
 
   try {
-    // Паралельне завантаження даних для обох фічей
-    [
-      internship,
-      feedback,
-      casualFeedback,
-      availableAchievements,
-      internAchievements,
-    ] = await Promise.all([
-      getTeammateInternshipDetail(internshipId, context.userId),
-      listTeammateFeedback(internshipId, context.userId),
-      listCasualFeedbackForTeammate(internshipId, context.userId),
-      getAvailableAchievements(),
-      getInternAchievements(internshipId),
-    ]);
+    [internship, feedback, casualFeedback, availableAchievements, internAchievements] =
+      await Promise.all([
+        getTeammateInternshipDetail(internshipId, context.userId),
+        listTeammateFeedback(internshipId, context.userId),
+        listCasualFeedbackForTeammate(internshipId, context.userId),
+        getAvailableAchievements(),
+        getInternAchievements(internshipId),
+      ]);
   } catch (error) {
     if (error instanceof AuthorizationError) redirect("/forbidden");
     throw error;
   }
-
-  // Бічне меню з усіма секціями
-  const workspaceMenu = [
-    { href: "#feedback", label: "Feedback" },
-    { href: "#achievements", label: "Achievements" },
-    { href: "#casual-feedback", label: "Casual Feedback" },
-    { href: "#one-on-one-preparation", label: "1:1 Preparation" },
-  ];
 
   return (
     <section className="space-y-7">
@@ -72,77 +59,99 @@ export default async function TeammateInternshipPage({
           {internship.internName}
         </h1>
       </div>
-      <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        {/* Адаптивне зафіксоване меню без білої плашки */}
-        <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
-          <Menu
-            items={workspaceMenu}
-            label="Internship navigation"
-            className="md:flex-col md:overflow-visible"
+
+      <Tabs.Root defaultValue="feedback" className="min-w-0 space-y-6">
+        <Tabs.List
+          aria-label="Internship workspace"
+          activateOnFocus
+          className="flex gap-7 overflow-x-auto border-b"
+        >
+          <Tabs.Tab
+            value="feedback"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Feedback
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="achievements"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Achievements
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="casual-feedback"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Casual Feedback
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="one-on-one-preparation"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            1:1 Preparation
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel
+          value="feedback"
+          keepMounted
+          className="min-w-0 overflow-hidden space-y-4"
+        >
+          <div>
+            <h2 className="text-lg font-semibold">Feedback</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Give feedback for this intern&apos;s active feedback cycles.
+            </p>
+          </div>
+          <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
+        </Tabs.Panel>
+
+        <Tabs.Panel
+          value="achievements"
+          keepMounted
+          className="min-w-0 overflow-hidden"
+        >
+          <AchievementsPanel
+            internshipId={internshipId}
+            availableAchievements={availableAchievements}
+            internAchievements={internAchievements}
           />
-        </div>
+        </Tabs.Panel>
 
-        {/* min-w-0 запобігає вилазинню контенту в грідах */}
-        <div className="min-w-0 space-y-10">
-          <section
-            id="feedback"
-            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
-          >
-            <div>
-              <h2 className="text-lg font-semibold">Feedback</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Give feedback for this intern&apos;s active feedback cycles.
-              </p>
-            </div>
-            <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
-          </section>
+        <Tabs.Panel
+          value="casual-feedback"
+          keepMounted
+          className="min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+        >
+          <div>
+            <h2 className="text-lg font-semibold">Casual Feedback</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Jot down a quick, informal note for a given date.
+            </p>
+          </div>
+          <CasualFeedbackPanel
+            internshipId={internshipId}
+            notes={casualFeedback}
+            canWrite
+          />
+        </Tabs.Panel>
 
-          {/* Секція Achievements */}
-          <section
-            id="achievements"
-            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
-          >
-            <AchievementsPanel
-              internshipId={internshipId}
-              availableAchievements={availableAchievements}
-              internAchievements={internAchievements}
-            />
-          </section>
-
-          {/* Секція Casual Feedback */}
-          <section
-            id="casual-feedback"
-            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
-          >
-            <div>
-              <h2 className="text-lg font-semibold">Casual Feedback</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Jot down a quick, informal note for a given date.
-              </p>
-            </div>
-            <CasualFeedbackPanel
-              internshipId={internshipId}
-              notes={casualFeedback}
-              canWrite
-            />
-          </section>
-
-          <section
-            id="one-on-one-preparation"
-            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
-          >
-            <div>
-              <h2 className="text-lg font-semibold">1:1 Preparation</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Prepare talking points for upcoming one-to-one meetings.
-              </p>
-            </div>
-            <div className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
-              One-to-one preparation will be added here.
-            </div>
-          </section>
-        </div>
-      </div>
+        <Tabs.Panel
+          value="one-on-one-preparation"
+          keepMounted
+          className="min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+        >
+          <div>
+            <h2 className="text-lg font-semibold">1:1 Preparation</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Prepare talking points for upcoming one-to-one meetings.
+            </p>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
+            One-to-one preparation will be added here.
+          </div>
+        </Tabs.Panel>
+      </Tabs.Root>
     </section>
   );
 }
