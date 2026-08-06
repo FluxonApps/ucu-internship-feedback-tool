@@ -4,7 +4,11 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { requireGuestPage } from "@/server/feedback/page-auth";
 import { listGuestPublishedFeedback } from "@/server/feedback/service";
-import Link from "next/link";;
+import Link from "next/link";
+
+// 1. Імпортуємо сервіс завантаження ачівок та UI-компонент списку
+import { getInternAchievements } from "@/server/achievements/service";
+import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
 
 export default async function GuestInternshipFeedbackPage({
   params,
@@ -13,12 +17,20 @@ export default async function GuestInternshipFeedbackPage({
 }) {
   await requireGuestPage();
   const { internshipId } = await params;
+
   let publications;
+  let achievements;
+
   try {
-    publications = await listGuestPublishedFeedback(internshipId);
+    // 2. Паралельно отримуємо фідбеки та видані ачівки для даного інтерна
+    [publications, achievements] = await Promise.all([
+      listGuestPublishedFeedback(internshipId),
+      getInternAchievements(internshipId),
+    ]);
   } catch {
     notFound();
   }
+
   if (!publications.length) notFound();
 
   return (
@@ -45,6 +57,7 @@ export default async function GuestInternshipFeedbackPage({
           View analytics
         </Link>
       </div>
+
       <section className="space-y-4 rounded-2xl border bg-card p-6">
         <div>
           <h2 className="text-lg font-semibold">Feedback history</h2>
@@ -53,6 +66,17 @@ export default async function GuestInternshipFeedbackPage({
           </p>
         </div>
         <PublishedFeedbackHistory publications={publications} />
+      </section>
+
+      {/* 3. Нова секція Achievements для гостей (тільки перегляд) */}
+      <section className="space-y-4 rounded-2xl border bg-card p-6">
+        <div>
+          <h2 className="text-lg font-semibold">Achievements</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Achievements awarded during this internship.
+          </p>
+        </div>
+        <AchievementsList achievements={achievements} />
       </section>
     </section>
   );
