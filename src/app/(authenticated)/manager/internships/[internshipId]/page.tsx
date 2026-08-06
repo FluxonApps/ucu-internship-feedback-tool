@@ -1,12 +1,18 @@
 import { Tabs } from "@base-ui/react/tabs";
+import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AssignmentsPanel } from "@/features/assignments/ui/AssignmentsPanel";
+import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
+import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
+
 import { requireManagerPage } from "@/server/assignments/page-auth";
 import { getManagedInternshipDetail } from "@/server/assignments/service";
-import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
 import { listManagerFeedbackCycles } from "@/server/feedback/service";
-import Link from "next/link";
+import {
+  getAvailableAchievements,
+  getInternAchievements,
+} from "@/server/achievements/service";
 
 export default async function AssignmentDetailPage({
   params,
@@ -15,10 +21,15 @@ export default async function AssignmentDetailPage({
 }) {
   const { internshipId } = await params;
   const context = await requireManagerPage();
-  const [detail, feedbackCycles] = await Promise.all([
-    getManagedInternshipDetail(internshipId, context.userId),
-    listManagerFeedbackCycles(internshipId, context.userId),
-  ]);
+
+  const [detail, feedbackCycles, availableAchievements, internAchievements] =
+    await Promise.all([
+      getManagedInternshipDetail(internshipId, context.userId),
+      listManagerFeedbackCycles(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
+    ]);
+
   return (
     <section className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -32,7 +43,6 @@ export default async function AssignmentDetailPage({
           <p className="text-sm font-medium text-[var(--brand-strong)]">
             {detail.internship.status} internship
           </p>
-
           <h1 className="text-3xl font-semibold tracking-tight">
             {detail.internship.internName}
           </h1>
@@ -44,6 +54,7 @@ export default async function AssignmentDetailPage({
           View analytics
         </Link>
       </div>
+
       <Tabs.Root defaultValue="assignments" className="min-w-0 space-y-6">
         <Tabs.List
           aria-label="Internship workspace"
@@ -61,6 +72,12 @@ export default async function AssignmentDetailPage({
             className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
           >
             Feedback
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="achievements"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Achievements
           </Tabs.Tab>
           <Tabs.Tab
             value="analytics"
@@ -84,6 +101,14 @@ export default async function AssignmentDetailPage({
           <section>
             <ManagerFeedbackPanel internshipId={internshipId} cycles={feedbackCycles} />
           </section>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="achievements" keepMounted className="min-w-0 overflow-hidden">
+          <AchievementsPanel
+            internshipId={internshipId}
+            availableAchievements={availableAchievements}
+            internAchievements={internAchievements}
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="analytics" keepMounted className="min-w-0 overflow-hidden">
