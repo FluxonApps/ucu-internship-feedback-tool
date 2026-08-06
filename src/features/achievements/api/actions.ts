@@ -32,7 +32,6 @@ export async function giveAchievementAction(input: GiveAchievementInput) {
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to give achievement:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to give achievement",
