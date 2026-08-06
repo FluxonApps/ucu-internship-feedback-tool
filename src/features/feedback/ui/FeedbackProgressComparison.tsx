@@ -1,22 +1,79 @@
+"use client";
+
+import { useState } from "react";
+
 import {
   feedbackMatrices,
   type FeedbackCriterion,
 } from "@/lib/feedback/definitions";
 
+
+function formatCycleDate(date: string) {
+  return new Date(date).toLocaleDateString();
+}
+
 type FeedbackProgressComparisonProps = {
-  previousRatings: Partial<Record<FeedbackCriterion, number>>;
-  currentRatings: Partial<Record<FeedbackCriterion, number>>;
+  cycles: {
+    ratings: Partial<Record<FeedbackCriterion, number>>;
+    evaluationStartsAt: string;
+    evaluationEndsAt: string;
+  }[];
 };
 
 export function FeedbackProgressComparison({
-  previousRatings,
-  currentRatings,
+  cycles,
 }: FeedbackProgressComparisonProps) {
+  const [currentCycle, setCurrentCycle] = useState(0);
+  const [previousCycle, setPreviousCycle] = useState(1);
+
+  const currentRatings = cycles[currentCycle]?.ratings ?? {};
+  const previousRatings = cycles[previousCycle]?.ratings ?? {};
+
   return (
-    <details className="rounded-xl bg-muted/30 p-4">
-      <summary className="cursor-pointer font-semibold">
-        View feedback progress
-      </summary>
+    <section className="rounded-xl bg-muted/30 p-4">
+      <h3 className="font-semibold">
+        Feedback progress
+      </h3>
+
+      <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-muted/40 p-4 text-sm">
+        <label className="flex items-center gap-2">
+          Current cycle:
+          <select
+            value={currentCycle}
+            onChange={(event) =>
+              setCurrentCycle(Number(event.target.value))
+            }
+            className="rounded-xl border bg-card px-3 py-2 text-sm shadow-sm transition hover:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          >
+            {cycles.map((_, index) => (
+              <option key={index} value={index}>
+                {formatCycleDate(cycles[index].evaluationStartsAt)}
+                -
+                {formatCycleDate(cycles[index].evaluationEndsAt)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          Compare with:
+          <select
+            value={previousCycle}
+            onChange={(event) =>
+              setPreviousCycle(Number(event.target.value))
+            }
+            className="rounded-xl border bg-card px-3 py-2 text-sm shadow-sm transition hover:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          >
+            {cycles.map((_, index) => (
+              <option key={index} value={index}>
+                {formatCycleDate(cycles[index].evaluationStartsAt)}
+                -
+                {formatCycleDate(cycles[index].evaluationEndsAt)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
         {feedbackMatrices.map((matrix) => (
@@ -83,6 +140,6 @@ export function FeedbackProgressComparison({
           </section>
         ))}
       </div>
-    </details>
+    </section>
   );
 }

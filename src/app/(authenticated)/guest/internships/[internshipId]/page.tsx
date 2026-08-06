@@ -10,6 +10,8 @@ import Link from "next/link";
 import { getInternAchievements } from "@/server/achievements/service";
 import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
 
+import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
+
 export default async function GuestInternshipFeedbackPage({
   params,
 }: {
@@ -32,6 +34,8 @@ export default async function GuestInternshipFeedbackPage({
   }
 
   if (!publications.length) notFound();
+
+  const latestPublication = publications[0];
 
   return (
     <section className="space-y-7">
@@ -57,6 +61,10 @@ export default async function GuestInternshipFeedbackPage({
           View analytics
         </Link>
       </div>
+
+      {latestPublication && (
+        <HealthScoreSection publication={latestPublication} />
+      )}
 
       <section className="space-y-4 rounded-2xl border bg-card p-6">
         <div>

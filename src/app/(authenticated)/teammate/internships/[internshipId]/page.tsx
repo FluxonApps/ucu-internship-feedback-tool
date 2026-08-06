@@ -7,8 +7,10 @@ import { getTeammateInternshipDetail } from "@/server/assignments/service";
 import { AuthorizationError } from "@/server/authorization/errors";
 import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPanel";
 import { listTeammateFeedback } from "@/server/feedback/service";
+import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
+import { listCasualFeedbackForTeammate } from "@/server/casual-feedback/service";
 
-// 1. Імпортуємо сервіси ачівок та UI-компонент
+// Сервіси ачівок та UI-компонент
 import { getAvailableAchievements, getInternAchievements } from "@/server/achievements/service";
 import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
 
@@ -22,14 +24,22 @@ export default async function TeammateInternshipPage({
 
   let internship: Awaited<ReturnType<typeof getTeammateInternshipDetail>>;
   let feedback: Awaited<ReturnType<typeof listTeammateFeedback>>;
+  let casualFeedback: Awaited<ReturnType<typeof listCasualFeedbackForTeammate>>;
   let availableAchievements: Awaited<ReturnType<typeof getAvailableAchievements>>;
   let internAchievements: Awaited<ReturnType<typeof getInternAchievements>>;
 
   try {
-    // 2. Додаємо паралельне завантаження ачівок
-    [internship, feedback, availableAchievements, internAchievements] = await Promise.all([
+    // Паралельне завантаження даних для обох фічей
+    [
+      internship,
+      feedback,
+      casualFeedback,
+      availableAchievements,
+      internAchievements,
+    ] = await Promise.all([
       getTeammateInternshipDetail(internshipId, context.userId),
       listTeammateFeedback(internshipId, context.userId),
+      listCasualFeedbackForTeammate(internshipId, context.userId),
       getAvailableAchievements(),
       getInternAchievements(internshipId),
     ]);
@@ -38,10 +48,11 @@ export default async function TeammateInternshipPage({
     throw error;
   }
 
-  // 3. Додаємо ачівки у бічне меню для швидкої навігації
+  // Бічне меню з усіма секціями
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
     { href: "#achievements", label: "Achievements" },
+    { href: "#casual-feedback", label: "Casual Feedback" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -86,7 +97,7 @@ export default async function TeammateInternshipPage({
             <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
           </section>
 
-          {/* 4. Нова секція Achievements */}
+          {/* Секція Achievements */}
           <section
             id="achievements"
             className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
@@ -95,6 +106,24 @@ export default async function TeammateInternshipPage({
               internshipId={internshipId}
               availableAchievements={availableAchievements}
               internAchievements={internAchievements}
+            />
+          </section>
+
+          {/* Секція Casual Feedback */}
+          <section
+            id="casual-feedback"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <div>
+              <h2 className="text-lg font-semibold">Casual Feedback</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Jot down a quick, informal note for a given date.
+              </p>
+            </div>
+            <CasualFeedbackPanel
+              internshipId={internshipId}
+              notes={casualFeedback}
+              canWrite
             />
           </section>
 
