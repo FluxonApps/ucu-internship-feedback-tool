@@ -14,22 +14,59 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    async function loadNotifications() {
+    let cancelled = false;
+
+    async function loadNotifications(showLoading = false) {
+      if (showLoading) {
+        setLoading(true);
+      }
+
       try {
-        const response = await fetch("/api/notifications");
+        const response = await fetch("/api/notifications", {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           return;
         }
 
         const data = (await response.json()) as NotificationDto[];
-        setNotifications(data);
+
+        if (!cancelled) {
+          setNotifications(data);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && showLoading) {
+          setLoading(false);
+        }
       }
     }
 
-    void loadNotifications();
+    void loadNotifications(true);
+
+    const intervalId = window.setInterval(() => {
+      void loadNotifications();
+    }, 30_000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadNotifications();
+      }
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
   }, []);
 
   const unreadCount = notifications.filter(
@@ -39,48 +76,48 @@ export function NotificationBell() {
   async function markAsRead(
     notificationId: string,
     href: string,
-) {
-  const notification = notifications.find(
-    (item) => item.id === notificationId,
-  );
-
-  if (!notification) {
-    return;
-  }
-
-  if (!notification.readAt) {
-    const response = await fetch(
-      `/api/notifications/${encodeURIComponent(notificationId)}`,
-      {
-        method: "PATCH",
-      },
+  ) {
+    const notification = notifications.find(
+      (item) => item.id === notificationId,
     );
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
-    console.error(
-      body?.error ?? `Unable to mark notification as read (${response.status}).`,
-    );
+    if (!notification) {
       return;
     }
 
-    const readAt = new Date().toISOString();
+    if (!notification.readAt) {
+      const response = await fetch(
+        `/api/notifications/${encodeURIComponent(notificationId)}`,
+        {
+          method: "PATCH",
+        },
+      );
 
-    setNotifications((current) =>
-      current.map((item) =>
-        item.id === notificationId
-          ? {
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        console.error(
+          body?.error ?? `Unable to mark notification as read (${response.status}).`,
+        );
+        return;
+      }
+
+      const readAt = new Date().toISOString();
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notificationId
+            ? {
               ...item,
               readAt,
             }
-          : item,
-      ),
-    );
-  }
-  setOpen(false);
-  router.push(href);
+            : item,
+        ),
+      );
+    }
+    setOpen(false);
+    router.push(href);
   }
   async function markAllAsRead() {
     const response = await fetch("/api/notifications", {
@@ -113,11 +150,11 @@ export function NotificationBell() {
 
   return (
     <details
-    className="relative"
-    open={open}
-    onToggle={(event) => {
+      className="relative"
+      open={open}
+      onToggle={(event) => {
         setOpen(event.currentTarget.open);
-    }}
+      }}
     >
       <summary
         aria-label="Notifications"
@@ -164,15 +201,14 @@ export function NotificationBell() {
                 key={notification.id}
                 href={notification.href}
                 onClick={(event) => {
-                    event.preventDefault();
-                    void markAsRead(
-                        notification.id,
-                        notification.href
-                    );
+                  event.preventDefault();
+                  void markAsRead(
+                    notification.id,
+                    notification.href
+                  );
                 }}
-                className={`block border-b px-4 py-3 last:border-b-0 hover:bg-muted/60 ${
-                  notification.readAt ? "" : "bg-[var(--brand-soft)]/40"
-                }`}
+                className={`block border-b px-4 py-3 last:border-b-0 hover:bg-muted/60 ${notification.readAt ? "" : "bg-[var(--brand-soft)]/40"
+                  }`}
               >
                 <div className="flex gap-3">
                   {!notification.readAt ? (
