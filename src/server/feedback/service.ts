@@ -136,7 +136,6 @@ export async function listManagerFeedbackCycles(
 
 async function publishedFeedbackDto(
   internshipId: string,
-  internId: string,
   internDisplayName: string,
   cycle: FirebaseFirestore.QueryDocumentSnapshot,
 ): Promise<PublishedFeedbackDto> {
@@ -153,7 +152,6 @@ async function publishedFeedbackDto(
   const managerCycle = await cycleDto(cycle, true);
   return {
     internshipId,
-    internId,
     internDisplayName,
     cycleId: cycle.id,
     evaluationStartsAt: managerCycle.evaluationStartsAt,
@@ -184,12 +182,7 @@ async function listPublishedFeedbackForInternship(
   );
   const result = await Promise.all(
     published.map((cycle) =>
-      publishedFeedbackDto(
-        internshipRef.id,
-        internshipData.internId,
-        internDisplayName,
-        cycle,
-      ),
+      publishedFeedbackDto(internshipRef.id, internDisplayName, cycle),
     ),
   );
   return result.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
@@ -201,7 +194,7 @@ export async function listInternPublishedFeedback(
 ): Promise<PublishedFeedbackDto[]> {
   const internshipRef = adminFirestore.collection("internships").doc(internshipId);
   const internship = await internshipRef.get();
-  if (!internship.exists) {
+  if (!internship.exists || internship.data()?.internId !== internId) {
     throw new AuthorizationError(
       "ROLE_REQUIRED",
       "You cannot view this internship's feedback.",

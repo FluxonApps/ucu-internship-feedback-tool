@@ -1,5 +1,5 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { AnalyticsPanel } from "@/features/feedback/ui/AnalyticsPanel";
+import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { AssignmentsPanel } from "@/features/assignments/ui/AssignmentsPanel";
@@ -47,6 +47,12 @@ export default async function AssignmentDetailPage({
             {detail.internship.internName}
           </h1>
         </div>
+        <Link
+          href={`/analytics?internshipId=${internshipId}`}
+          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
+        >
+          View analytics
+        </Link>
       </div>
 
       <Tabs.Root defaultValue="assignments" className="min-w-0 space-y-6">
@@ -104,16 +110,7 @@ export default async function AssignmentDetailPage({
         </Tabs.Panel>
 
         <Tabs.Panel value="analytics" keepMounted className="min-w-0 overflow-hidden">
-          <Tabs.Panel
-            value="analytics"
-            keepMounted
-            className="min-w-0 overflow-hidden"
-          >
-            <AnalyticsPanel
-              internshipId={internshipId}
-              internId={detail.internship.internId}
-            />
-          </Tabs.Panel>
+          <p className="text-sm text-muted-foreground">To Do</p>
         </Tabs.Panel>
       </Tabs.Root>
     </section>
