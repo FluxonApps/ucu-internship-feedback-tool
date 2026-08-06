@@ -633,3 +633,23 @@ export async function closeTeammateAssignment(
     updatedBy: managerId,
   });
 }
+
+
+export async function getInternIdByInternship(
+  internshipId: string,
+) {
+  const internship = await adminFirestore
+    .collection("internships")
+    .doc(internshipId)
+    .get();
+
+  if (!internship.exists) {
+    return undefined;
+  }
+
+  const data = internship.data() as {
+    internId: string;
+  };
+
+  return data.internId;
+}

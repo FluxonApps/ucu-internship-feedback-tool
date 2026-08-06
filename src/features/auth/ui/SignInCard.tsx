@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import {
-  GoogleAuthProvider,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  type UserCredential,
-} from "firebase/auth";
+import type { UserCredential } from "firebase/auth";
 import { LoaderCircle, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { getClientEnvironment } from "@/lib/env/client";
-import { getFirebaseClientAuth } from "@/lib/firebase/client";
+import {
+  authenticateLocalPersona,
+  authenticateWithGoogle,
+  establishServerSession
+} from "../api/auth";
 
-const localPersonas = [
+export const localPersonas = [
   {
     id: "manager",
     name: "Maya Manager",
@@ -36,30 +35,13 @@ const localPersonas = [
   },
 ] as const;
 
-async function establishServerSession(credential: UserCredential): Promise<void> {
-  const idToken = await credential.user.getIdToken();
-  const response = await fetch("/api/auth/session", {
-    body: JSON.stringify({ idToken }),
-    headers: {
-      "content-type": "application/json",
-    },
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    const result = (await response.json().catch(() => undefined)) as
-      { error?: string } | undefined;
-    throw new Error(result?.error ?? "Unable to create an application session.");
-  }
-}
-
 export function SignInCard() {
   const environment = getClientEnvironment();
   const [pendingPersona, setPendingPersona] = useState<string>();
   const [error, setError] = useState<string>();
 
   async function finishSignIn(credential: UserCredential) {
-    await establishServerSession(credential);
+    await establishServerSession({ credential });
     window.location.assign("/");
   }
 
@@ -68,13 +50,11 @@ export function SignInCard() {
     setPendingPersona("google");
 
     try {
-      const auth = getFirebaseClientAuth();
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-      await finishSignIn(await signInWithPopup(auth, provider));
+      const response = await authenticateWithGoogle();
+      await finishSignIn(response.credential);
     } catch (signInError) {
       setError(
-        signInError instanceof Error ? signInError.message : "Google sign-in failed.",
+        signInError instanceof Error ? signInError.message : "Google sign-in failed."
       );
       setPendingPersona(undefined);
     }
@@ -85,13 +65,11 @@ export function SignInCard() {
     setPendingPersona(persona.id);
 
     try {
-      const auth = getFirebaseClientAuth();
-      await finishSignIn(
-        await signInWithEmailAndPassword(auth, persona.email, "local-only-password"),
-      );
+      const response = await authenticateLocalPersona({ email: persona.email });
+      await finishSignIn(response.credential);
     } catch (signInError) {
       setError(
-        signInError instanceof Error ? signInError.message : "Local sign-in failed.",
+        signInError instanceof Error ? signInError.message : "Local sign-in failed."
       );
       setPendingPersona(undefined);
     }
@@ -115,21 +93,23 @@ export function SignInCard() {
       {environment.authenticationMode === "email-password-development" ? (
         <div>
           <p className="mb-3 text-sm font-medium">Local development personas</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {localPersonas.map((persona) => (
               <Button
                 key={persona.id}
                 variant="outline"
-                className="h-auto justify-start px-3 py-3"
+                className="h-auto w-full items-start justify-start px-3 py-3"
                 disabled={Boolean(pendingPersona)}
                 onClick={() => signInAsLocalPersona(persona)}
               >
                 {pendingPersona === persona.id ? (
-                  <LoaderCircle className="animate-spin" />
+                  <LoaderCircle className="mt-0.5 shrink-0 animate-spin" />
                 ) : null}
-                <span className="text-left">
-                  <span className="block">Authenticate as {persona.id}</span>
-                  <span className="block text-xs font-normal text-muted-foreground">
+                <span className="min-w-0 text-left">
+                  <span className="block font-medium">
+                    Authenticate as {persona.id}
+                  </span>
+                  <span className="block truncate text-xs font-normal text-muted-foreground">
                     {persona.email}
                   </span>
                 </span>

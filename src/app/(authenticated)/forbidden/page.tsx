@@ -1,6 +1,6 @@
 import { ShieldX } from "lucide-react";
 
-import { SignOutButton } from "@/features/auth/SignOutButton";
+import { SignOutButton } from "@/features/auth/ui/SignOutButton";
 
 export default function ForbiddenPage() {
   return (

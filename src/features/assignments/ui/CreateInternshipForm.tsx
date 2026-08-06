@@ -68,7 +68,7 @@ export function CreateInternshipForm({
           required
           value={internId}
           onChange={(event) => setInternId(event.target.value)}
-          className="h-10 rounded-lg border bg-background px-3"
+          className="h-10 w-full min-w-0 max-w-full truncate rounded-lg border bg-background px-3"
         >
           <option value="">Select an intern</option>
           {interns.map((intern) => (
@@ -87,7 +87,7 @@ export function CreateInternshipForm({
           value={teamName}
           onChange={(event) => setTeamName(event.target.value)}
           placeholder="Select or enter a Team name"
-          className="h-10 rounded-lg border bg-background px-3"
+          className="h-10 w-full min-w-0 max-w-full rounded-lg border bg-background px-3"
         />
         <datalist id="team-options">
           {teams.map((team) => (
@@ -106,7 +106,7 @@ export function CreateInternshipForm({
           required
           value={startsAt}
           onChange={(event) => setStartsAt(event.target.value)}
-          className="h-10 rounded-lg border bg-background px-3"
+          className="h-10 w-full min-w-0 max-w-full rounded-lg border bg-background px-3"
         />
       </label>
       {error ? (

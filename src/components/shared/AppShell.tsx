@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { AuthorizationContext } from "@/server/authorization/context";
 
-import { SignOutButton } from "@/features/auth/SignOutButton";
+import { SignOutButton } from "@/features/auth/ui/SignOutButton";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 export function AppShell({
