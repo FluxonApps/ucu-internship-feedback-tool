@@ -28,7 +28,11 @@ export default async function InternPage() {
           </h1>
         </div>
         <Link
-          href={`/analytics?internId=${context.userId}`}
+          href={
+            internship
+              ? `/analytics?internshipId=${internship.id}`
+              : "#"
+          }
           className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
         >
           View analytics
