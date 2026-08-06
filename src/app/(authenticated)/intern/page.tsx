@@ -3,6 +3,8 @@ import { requireInternPage } from "@/server/assignments/page-auth";
 import { getCurrentInternshipForIntern } from "@/server/assignments/service";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
+import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
+import { listCasualFeedbackForIntern } from "@/server/casual-feedback/service";
 import Link from "next/link";
 
 import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
@@ -10,11 +12,17 @@ import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
 export default async function InternPage() {
   const context = await requireInternPage();
   const internship = await getCurrentInternshipForIntern(context.userId);
-  const publications = internship
-    ? await listInternPublishedFeedback(internship.id, context.userId)
-    : [];
+  let publications: Awaited<ReturnType<typeof listInternPublishedFeedback>> = [];
+  let casualFeedback: Awaited<ReturnType<typeof listCasualFeedbackForIntern>> = [];
+  if (internship) {
+    [publications, casualFeedback] = await Promise.all([
+      listInternPublishedFeedback(internship.id, context.userId),
+      listCasualFeedbackForIntern(internship.id, context.userId),
+    ]);
+  }
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
+    { href: "#casual-feedback", label: "Casual Feedback" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -74,6 +82,23 @@ export default async function InternPage() {
                 <h3 className="text-lg font-semibold">Feedback History</h3>
                 <PublishedFeedbackHistory publications={publications} />
               </div>
+            </section>
+
+            <section
+              id="casual-feedback"
+              className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+            >
+              <div>
+                <h2 className="text-lg font-semibold">Casual Feedback</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Informal notes your teammates have shared about your internship.
+                </p>
+              </div>
+              <CasualFeedbackPanel
+                internshipId={internship.id}
+                notes={casualFeedback}
+                canWrite={false}
+              />
             </section>
 
             <section
