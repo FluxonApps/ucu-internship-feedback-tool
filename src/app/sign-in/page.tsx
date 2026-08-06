@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { SignInCard } from "@/features/auth/SignInCard";
+import { SignInCard } from "@/features/auth/ui/SignInCard";
 import { getOptionalAuthenticatedUser } from "@/server/auth/require-user";
 
 export const metadata = {
