@@ -1,10 +1,11 @@
 import { GiveAchievementModal } from "@/features/achievements/ui/GiveAchievementModal";
 import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
+import type { Achievement, InternAchievement } from "@/server/achievements/service";
 
 interface AchievementsPanelProps {
   internshipId: string;
-  availableAchievements: any[];
-  internAchievements: any[];
+  availableAchievements: Achievement[];
+  internAchievements: InternAchievement[];
 }
 
 export function AchievementsPanel({
@@ -12,6 +13,10 @@ export function AchievementsPanel({
   availableAchievements,
   internAchievements,
 }: AchievementsPanelProps) {
+  const alreadyAwardedIds = internAchievements.map(
+    (item) => item.achievementId ?? item.id
+  );
+
   return (
     <section className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -21,9 +26,11 @@ export function AchievementsPanel({
             Recognize and track the intern's milestones.
           </p>
         </div>
+
         <GiveAchievementModal
           internId={internshipId}
           availableAchievements={availableAchievements}
+          alreadyAwardedIds={alreadyAwardedIds}
         />
       </div>
 
