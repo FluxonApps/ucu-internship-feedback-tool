@@ -93,21 +93,23 @@ export function SignInCard() {
       {environment.authenticationMode === "email-password-development" ? (
         <div>
           <p className="mb-3 text-sm font-medium">Local development personas</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {localPersonas.map((persona) => (
               <Button
                 key={persona.id}
                 variant="outline"
-                className="h-auto justify-start px-3 py-3"
+                className="h-auto w-full items-start justify-start px-3 py-3"
                 disabled={Boolean(pendingPersona)}
                 onClick={() => signInAsLocalPersona(persona)}
               >
                 {pendingPersona === persona.id ? (
-                  <LoaderCircle className="animate-spin" />
+                  <LoaderCircle className="mt-0.5 shrink-0 animate-spin" />
                 ) : null}
-                <span className="text-left">
-                  <span className="block">Authenticate as {persona.id}</span>
-                  <span className="block text-xs font-normal text-muted-foreground">
+                <span className="min-w-0 text-left">
+                  <span className="block font-medium">
+                    Authenticate as {persona.id}
+                  </span>
+                  <span className="block truncate text-xs font-normal text-muted-foreground">
                     {persona.email}
                   </span>
                 </span>
