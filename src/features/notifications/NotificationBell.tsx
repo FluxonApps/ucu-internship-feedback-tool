@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { NotificationDto } from "@/lib/notifications/types";
@@ -174,6 +174,35 @@ export function NotificationBell() {
     );
   }
 
+  async function deleteSingleNotification(
+    notificationId: string,
+  ) {
+    const response = await fetch(
+      `/api/notifications/${encodeURIComponent(notificationId)}`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      console.error(
+        body?.error ?? "Unable to delete notification.",
+      );
+
+      return;
+    }
+
+    setNotifications((current) =>
+      current.filter(
+        (notification) => notification.id !== notificationId,
+      ),
+    );
+  }
+
   return (
     <details
       className="relative"
@@ -237,39 +266,60 @@ export function NotificationBell() {
             </p>
           ) : (
             notifications.map((notification) => (
-              <Link
+              <div
                 key={notification.id}
-                href={notification.href}
-                onClick={(event) => {
-                  event.preventDefault();
-                  void markAsRead(
-                    notification.id,
-                    notification.href
-                  );
-                }}
-                className={`block border-b px-4 py-3 last:border-b-0 hover:bg-muted/60 ${notification.readAt ? "" : "bg-[var(--brand-soft)]/40"
+                className={`relative border-b last:border-b-0 hover:bg-muted/60 ${notification.readAt
+                  ? ""
+                  : "bg-[var(--brand-soft)]/40"
                   }`}
               >
-                <div className="flex gap-3">
-                  {!notification.readAt ? (
-                    <span className="mt-2 size-2 shrink-0 rounded-full bg-[var(--brand-strong)]" />
-                  ) : (
-                    <span className="mt-2 size-2 shrink-0" />
-                  )}
+                <Link
+                  href={notification.href}
+                  onClick={(event) => {
+                    event.preventDefault();
 
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {notification.title}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {notification.message}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {new Date(notification.createdAt).toLocaleString("en-GB")}
-                    </p>
+                    void markAsRead(
+                      notification.id,
+                      notification.href,
+                    );
+                  }}
+                  className="block px-4 py-3 pr-11"
+                >
+                  <div className="flex gap-3">
+                    {!notification.readAt ? (
+                      <span className="mt-2 size-2 shrink-0 rounded-full bg-[var(--brand-strong)]" />
+                    ) : (
+                      <span className="mt-2 size-2 shrink-0" />
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {notification.title}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {notification.message}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {new Date(notification.createdAt).toLocaleString(
+                          "en-GB",
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+                {notification.readAt ? (
+                  <button
+                    type="button"
+                    aria-label="Delete notification"
+                    onClick={() => {
+                      void deleteSingleNotification(notification.id);
+                    }}
+                    className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                ) : null}
+              </div>
             ))
           )}
         </div>

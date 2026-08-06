@@ -176,3 +176,28 @@ export async function deleteReadNotifications(
 
   await batch.commit();
 }
+
+export async function deleteNotification(
+  notificationId: string,
+  userId: string,
+): Promise<void> {
+  const notificationRef = adminFirestore
+    .collection("notifications")
+    .doc(notificationId);
+
+  await adminFirestore.runTransaction(async (transaction) => {
+    const notification = await transaction.get(notificationRef);
+
+    if (!notification.exists) {
+      throw new Error("Notification was not found.");
+    }
+
+    const data = notification.data() as NotificationData;
+
+    if (data.recipientUserId !== userId) {
+      throw new Error("You cannot delete this notification.");
+    }
+
+    transaction.delete(notificationRef);
+  });
+}
