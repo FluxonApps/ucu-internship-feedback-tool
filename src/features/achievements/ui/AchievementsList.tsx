@@ -25,9 +25,9 @@ export function AchievementsList({ achievements }: AchievementsListProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {achievements.map((item) => {
-        const formattedDate = new Date(item.createdAt).toLocaleDateString("uk-UA", {
-          day: "numeric",
-          month: "short",
+        const formattedDate = new Date(item.createdAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
           year: "numeric",
         });
 
