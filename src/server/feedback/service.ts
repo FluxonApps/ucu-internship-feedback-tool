@@ -20,7 +20,7 @@ import type { TeammateResponsibility } from "@/lib/teammate-responsibilities";
 import { isCurrent } from "@/server/assignments/domain";
 import { AuthorizationError } from "@/server/authorization/errors";
 import { adminFirestore } from "@/server/firebase/admin";
-
+import {addNotificationToBatch, addNotificationToTransaction } from "@/server/notifications/service";
 import { assertValidEvaluationRange, assertValidFeedbackAnswers } from "./domain";
 import type { createFeedbackCycleInputSchema, FeedbackAnswersInput } from "./schemas";
 
@@ -318,6 +318,23 @@ export async function publishFeedbackCycle(
       updatedAt: now,
       updatedBy: managerId,
     });
+
+    const internId = internship.data()?.internId as string | undefined;
+
+    if (!internId) {
+      throw new Error("The internship does not have an assigned intern.");
+    }
+
+    addNotificationToTransaction(transaction, {
+      recipientUserId: internId,
+      type: "feedbackPublished",
+      title: "New feedback published",
+      message: "Your feedback results are now available.",
+      href: `/intern/internships/${internshipId}`,
+      internshipId,
+      feedbackCycleId: cycleId,
+      deduplicationKey: `feedback-published:${cycleId}:${internId}`,
+    });
   });
 }
 
@@ -336,7 +353,22 @@ export async function startFeedbackCycle(
   }
 
   const now = Timestamp.now();
-  const assignments = await internshipRef.collection("teammateAssignments").get();
+  const [assignments, internship] = await Promise.all([
+    internshipRef.collection("teammateAssignments").get(),
+    internshipRef.get(),
+  ]);
+
+  const internId = internship.data()?.internId as string | undefined;
+
+  const intern = internId
+    ? await adminFirestore.collection("users").doc(internId).get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists && typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
+
   const current = assignments.docs.filter((document) => {
     const data = document.data() as { startsAt: Timestamp; endsAt?: Timestamp };
     return isCurrent(data, now);
@@ -403,6 +435,16 @@ export async function startFeedbackCycle(
       createdBy: managerId,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: managerId,
+    });
+    addNotificationToBatch(batch, {
+      recipientUserId: reviewerUserId,
+      type: "feedbackCycleStarted",
+      title: "New feedback request",
+      message: `Feedback for ${internDisplayName} is now available.`,
+      href: `/teammate/internships/${internshipId}`,
+      internshipId,
+      feedbackCycleId: cycleRef.id,
+      deduplicationKey: `feedback-cycle-started:${cycleRef.id}:${reviewerUserId}`,
     });
   });
   await batch.commit();
@@ -472,13 +514,20 @@ async function writeOwnResponse(
       value as FeedbackRating,
     ]),
   );
-  const cycleRef = adminFirestore
+  const internshipRef = adminFirestore
     .collection("internships")
-    .doc(internshipId)
+    .doc(internshipId);
+
+  const cycleRef = internshipRef
     .collection("feedbackCycles")
     .doc(cycleId);
   const reviewerRef = cycleRef.collection("reviewers").doc(reviewerUserId);
   const responseRef = cycleRef.collection("responses").doc(reviewerUserId);
+
+  const managerAssignments = submit
+    ? await internshipRef.collection("managerAssignments").get()
+    : undefined;
+
   await adminFirestore.runTransaction(async (transaction) => {
     const [cycle, reviewer, response] = await Promise.all([
       transaction.get(cycleRef),
@@ -531,6 +580,20 @@ async function writeOwnResponse(
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: reviewerUserId,
     });
+    if (submit && managerAssignments) {
+      managerAssignments.docs.forEach((managerAssignment) => {
+        addNotificationToTransaction(transaction, {
+          recipientUserId: managerAssignment.id,
+          type: "feedbackSubmitted",
+          title: "Feedback submitted",
+          message: `${reviewerData.reviewerDisplayNameSnapshot} submitted feedback.`,
+          href: `/manager/internships/${internshipId}#feedback-cycles`,
+          internshipId,
+          feedbackCycleId: cycleId,
+          deduplicationKey: `feedback-submitted:${cycleId}:${reviewerUserId}:${managerAssignment.id}`,
+        });
+      });
+    }
   });
 }
 
