@@ -449,34 +449,75 @@ export async function addTeamPlacement(
   input: z.infer<typeof createPlacementInputSchema>,
 ) {
   assertValidRange(input);
-  const internshipRef = await requireManagedInternship(internshipId, managerId);
+  const internshipRef = await requireManagedInternship(
+    internshipId,
+    managerId,
+  );
+
   await adminFirestore.runTransaction(async (transaction) => {
-    const placements = await transaction.get(
-      internshipRef.collection("teamPlacements"),
-    );
+    const [placements, teammates] = await Promise.all([
+      transaction.get(
+        internshipRef.collection("teamPlacements"),
+      ),
+      transaction.get(
+        internshipRef.collection("teammateAssignments"),
+      ),
+    ]);
+
     const existing = placements.docs.map((document) => ({
       ref: document.ref,
       ...(document.data() as DateRange & { teamId: string }),
     }));
-    if (existing.some((placement) => rangesOverlap(placement, input))) {
-      const ongoing = existing.find(
+
+    const overlappingPlacement = existing.some((placement) =>
+      rangesOverlap(placement, input),
+    );
+
+    let ongoing:
+      | (DateRange & {
+          teamId: string;
+          ref: FirebaseFirestore.DocumentReference;
+        })
+      | undefined;
+
+    if (overlappingPlacement) {
+      ongoing = existing.find(
         (placement) =>
           !placement.endsAt &&
           placement.startsAt.toMillis() < input.startsAt.toMillis(),
       );
-      if (!ongoing) throw new Error("Team Placements cannot overlap.");
-      const previousEnd = Timestamp.fromMillis(input.startsAt.toMillis() - 1);
+
+      if (!ongoing) {
+        throw new Error("Team Placements cannot overlap.");
+      }
+    }
+
+    const teamRef = await resolveTeam(
+      transaction,
+      input.team,
+      managerId,
+    );
+
+    if (ongoing) {
+      const previousEnd = Timestamp.fromMillis(
+        input.startsAt.toMillis() - 1,
+      );
+
       transaction.update(ongoing.ref, {
         endsAt: previousEnd,
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: managerId,
       });
-      const teammates = await transaction.get(
-        internshipRef.collection("teammateAssignments"),
-      );
+
       teammates.docs.forEach((document) => {
-        const assignment = document.data() as DateRange & { teamId: string };
-        if (assignment.teamId === ongoing.teamId && !assignment.endsAt) {
+        const assignment = document.data() as DateRange & {
+          teamId: string;
+        };
+
+        if (
+          assignment.teamId === ongoing?.teamId &&
+          !assignment.endsAt
+        ) {
           transaction.update(document.ref, {
             endsAt: previousEnd,
             updatedAt: FieldValue.serverTimestamp(),
@@ -485,16 +526,19 @@ export async function addTeamPlacement(
         }
       });
     }
-    const teamRef = await resolveTeam(transaction, input.team, managerId);
-    transaction.create(internshipRef.collection("teamPlacements").doc(), {
-      teamId: teamRef.id,
-      startsAt: input.startsAt,
-      ...(input.endsAt ? { endsAt: input.endsAt } : {}),
-      createdAt: FieldValue.serverTimestamp(),
-      createdBy: managerId,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: managerId,
-    });
+
+    transaction.create(
+      internshipRef.collection("teamPlacements").doc(),
+      {
+        teamId: teamRef.id,
+        startsAt: input.startsAt,
+        ...(input.endsAt ? { endsAt: input.endsAt } : {}),
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: managerId,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: managerId,
+      },
+    );
   });
 }
 
