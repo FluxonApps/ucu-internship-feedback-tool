@@ -329,10 +329,11 @@ export async function getManagedInternshipDetail(
   );
   return {
     internship: {
-      id: internshipId,
-      status: internshipData.status,
-      internName: intern.data()?.displayName as string,
-    },
+    id: internshipId,
+    internId: internshipData.internId,
+    status: internshipData.status,
+    internName: intern.data()?.displayName as string,
+  },
     placements: placements.docs.map((document) => {
       const data = document.data() as DateRange & { teamId: string };
       return {

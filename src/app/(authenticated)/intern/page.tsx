@@ -5,7 +5,7 @@ import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedba
 import { listInternPublishedFeedback } from "@/server/feedback/service";
 import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
 import { listCasualFeedbackForIntern } from "@/server/casual-feedback/service";
-import Link from "next/link";
+import { AnalyticsPanel } from "@/features/feedback/ui/AnalyticsPanel";
 
 import { getInternAchievements } from "@/server/achievements/service";
 import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
@@ -31,6 +31,7 @@ export default async function InternPage() {
     { href: "#feedback", label: "Feedback" },
     { href: "#casual-feedback", label: "Casual Feedback" },
     { href: "#achievements", label: "Achievements" },
+    { href: "#analytics", label: "Analytics" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -47,16 +48,6 @@ export default async function InternPage() {
             Intern dashboard
           </h1>
         </div>
-        <Link
-          href={
-            internship
-              ? `/analytics?internshipId=${internship.id}`
-              : "#"
-          }
-          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
-        >
-          View analytics
-        </Link>
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
@@ -118,6 +109,23 @@ export default async function InternPage() {
                 </p>
               </div>
               <AchievementsList achievements={achievements} />
+            </section>
+
+            <section
+              id="analytics"
+              className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+            >
+              <div>
+                <h2 className="text-lg font-semibold">Analytics</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Track your feedback progress and development over time.
+                </p>
+              </div>
+
+              <AnalyticsPanel
+                internshipId={internship.id}
+                internId={context.userId}
+              />
             </section>
 
             <section
