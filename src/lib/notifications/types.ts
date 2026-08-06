@@ -1,5 +1,6 @@
 export type NotificationType =
   | "feedbackCycleStarted"
+  | "feedbackCycleCancelled"
   | "feedbackSubmitted"
   | "allFeedbackSubmitted"
   | "feedbackPublished"

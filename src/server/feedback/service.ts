@@ -20,7 +20,7 @@ import type { TeammateResponsibility } from "@/lib/teammate-responsibilities";
 import { isCurrent } from "@/server/assignments/domain";
 import { AuthorizationError } from "@/server/authorization/errors";
 import { adminFirestore } from "@/server/firebase/admin";
-import {addNotificationToBatch, addNotificationToTransaction } from "@/server/notifications/service";
+import { addNotificationToBatch, addNotificationToTransaction } from "@/server/notifications/service";
 import { assertValidEvaluationRange, assertValidFeedbackAnswers } from "./domain";
 import type { createFeedbackCycleInputSchema, FeedbackAnswersInput } from "./schemas";
 
@@ -439,8 +439,8 @@ export async function startFeedbackCycle(
     addNotificationToBatch(batch, {
       recipientUserId: reviewerUserId,
       type: "feedbackCycleStarted",
-      title: "New feedback request",
-      message: `Feedback for ${internDisplayName} is now available.`,
+      title: "Feedback cycle started",
+      message: `A new feedback cycle for ${internDisplayName} is now open.`,
       href: `/teammate/internships/${internshipId}`,
       internshipId,
       feedbackCycleId: cycleRef.id,
@@ -481,22 +481,51 @@ export async function cancelFeedbackCycle(
   managerId: string,
   reason?: string,
 ) {
-  const internshipRef = await requireManagedInternship(internshipId, managerId);
-  const cycleRef = internshipRef.collection("feedbackCycles").doc(cycleId);
+  const internshipRef = await requireManagedInternship(
+    internshipId,
+    managerId,
+  );
+
+  const cycleRef = internshipRef
+    .collection("feedbackCycles")
+    .doc(cycleId);
+
+  const reviewers = await cycleRef.collection("reviewers").get();
+
   await adminFirestore.runTransaction(async (transaction) => {
     const cycle = await transaction.get(cycleRef);
+
     if (
       !cycle.exists ||
       feedbackCycleState(cycle.data() as CycleData) !== "collecting"
     ) {
       throw new Error("Only a collecting cycle can be cancelled.");
     }
+
     transaction.update(cycleRef, {
       cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy: managerId,
       ...(reason ? { cancellationReason: reason } : {}),
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: managerId,
+    });
+
+    reviewers.docs.forEach((reviewer) => {
+      const reviewerData = reviewer.data() as ReviewerData;
+
+      addNotificationToTransaction(transaction, {
+        recipientUserId: reviewerData.reviewerUserId,
+        type: "feedbackCycleCancelled",
+        title: "Feedback cycle cancelled",
+        message: reason
+          ? `The feedback cycle has been cancelled. Reason: ${reason}`
+          : "The feedback cycle has been cancelled.",
+        href: `/teammate/internships/${internshipId}`,
+        internshipId,
+        feedbackCycleId: cycleId,
+        deduplicationKey:
+          `feedback-cycle-cancelled:${cycleId}:${reviewerData.reviewerUserId}`,
+      });
     });
   });
 }
@@ -563,9 +592,9 @@ async function writeOwnResponse(
         customAnswers: answers.customAnswers,
         ...(!response.exists
           ? {
-              createdAt: FieldValue.serverTimestamp(),
-              createdBy: reviewerUserId,
-            }
+            createdAt: FieldValue.serverTimestamp(),
+            createdBy: reviewerUserId,
+          }
           : {}),
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: reviewerUserId,
