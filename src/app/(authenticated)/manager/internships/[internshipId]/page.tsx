@@ -6,6 +6,7 @@ import { requireManagerPage } from "@/server/assignments/page-auth";
 import { getManagedInternshipDetail } from "@/server/assignments/service";
 import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
 import { listManagerFeedbackCycles } from "@/server/feedback/service";
+import Link from "next/link";
 
 export default async function AssignmentDetailPage({
   params,
@@ -20,19 +21,28 @@ export default async function AssignmentDetailPage({
   ]);
   return (
     <section className="space-y-7">
-      <div className="space-y-2">
-        <Breadcrumbs
-          items={[
-            { label: "Internships", href: "/manager/internships" },
-            { label: detail.internship.internName },
-          ]}
-        />
-        <p className="text-sm font-medium text-[var(--brand-strong)]">
-          {detail.internship.status} internship
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {detail.internship.internName}
-        </h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: "Internships", href: "/manager/internships" },
+              { label: detail.internship.internName },
+            ]}
+          />
+          <p className="text-sm font-medium text-[var(--brand-strong)]">
+            {detail.internship.status} internship
+          </p>
+
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {detail.internship.internName}
+          </h1>
+        </div>
+        <Link
+          href={`/analytics?internshipId=${internshipId}`}
+          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
+        >
+          View analytics
+        </Link>
       </div>
       <Tabs.Root defaultValue="assignments" className="min-w-0 space-y-6">
         <Tabs.List
