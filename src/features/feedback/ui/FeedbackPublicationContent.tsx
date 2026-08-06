@@ -61,7 +61,7 @@ export function FeedbackPublicationContent({
         ))}
       </div>
 
-      {publication.questions.map((question) => (
+      {publication.questions.map((question, questionIndex) => (
         <section key={question.id} className="space-y-3">
           <h4 className="font-semibold">{question.prompt}</h4>
           {question.answers.length ? (
@@ -73,25 +73,27 @@ export function FeedbackPublicationContent({
                 >
                   <div className="flex items-start justify-between gap-4">
                     <p className="font-medium">{attribution(answer)}</p>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 ring-1 ring-inset ring-emerald-700/10">
-                        Overall: {typeof (answer as any).overallScore === "number" && (answer as any).overallScore > 0
-                          ? ((answer as any).overallScore).toFixed(1)
-                          : "-"}
-                      </span>
+                    {questionIndex === 0 && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 ring-1 ring-inset ring-emerald-700/10">
+                          Overall: {typeof (answer as any).overallScore === "number" && (answer as any).overallScore > 0
+                            ? ((answer as any).overallScore).toFixed(1)
+                            : "-"}
+                        </span>
 
-                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                        Soft: {typeof (answer as any).softScore === "number" && (answer as any).softScore > 0
-                          ? ((answer as any).softScore).toFixed(1)
-                          : "-"}
-                      </span>
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                          Soft: {typeof (answer as any).softScore === "number" && (answer as any).softScore > 0
+                            ? ((answer as any).softScore).toFixed(1)
+                            : "-"}
+                        </span>
 
-                      <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
-                        Tech: {typeof (answer as any).techScore === "number" && (answer as any).techScore > 0
-                          ? ((answer as any).techScore).toFixed(1)
-                          : "-"}
-                      </span>
-                    </div>
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                          Tech: {typeof (answer as any).techScore === "number" && (answer as any).techScore > 0
+                            ? ((answer as any).techScore).toFixed(1)
+                            : "-"}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <p className="mt-2 whitespace-pre-wrap text-muted-foreground">
