@@ -73,6 +73,10 @@ export function NotificationBell() {
     (notification) => !notification.readAt,
   ).length;
 
+  const hasReadNotifications = notifications.some(
+    (notification) => Boolean(notification.readAt),
+  );
+
   async function markAsRead(
     notificationId: string,
     href: string,
@@ -148,6 +152,28 @@ export function NotificationBell() {
     setOpen(false);
   }
 
+  async function clearReadNotifications() {
+    const response = await fetch("/api/notifications/read", {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      console.error(
+        body?.error ?? "Unable to delete read notifications.",
+      );
+
+      return;
+    }
+
+    setNotifications((current) =>
+      current.filter((notification) => !notification.readAt),
+    );
+  }
+
   return (
     <details
       className="relative"
@@ -173,17 +199,31 @@ export function NotificationBell() {
         <div className="flex items-center justify-between border-b px-4 py-3">
           <p className="font-semibold">Notifications</p>
 
-          {unreadCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => {
-                void markAllAsRead();
-              }}
-              className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
-            >
-              Mark all as read
-            </button>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void markAllAsRead();
+                }}
+                className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
+              >
+                Mark all as read
+              </button>
+            ) : null}
+
+            {hasReadNotifications ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void clearReadNotifications();
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Clear read
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="max-h-96 overflow-y-auto">

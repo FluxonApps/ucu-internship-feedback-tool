@@ -149,3 +149,30 @@ export async function markAllNotificationsAsRead(
 
   await batch.commit();
 }
+
+export async function deleteReadNotifications(
+  userId: string,
+): Promise<void> {
+  const snapshot = await adminFirestore
+    .collection("notifications")
+    .where("recipientUserId", "==", userId)
+    .get();
+
+  const readNotifications = snapshot.docs.filter((document) => {
+    const data = document.data() as NotificationData;
+
+    return Boolean(data.readAt);
+  });
+
+  if (!readNotifications.length) {
+    return;
+  }
+
+  const batch = adminFirestore.batch();
+
+  readNotifications.forEach((document) => {
+    batch.delete(document.ref);
+  });
+
+  await batch.commit();
+}
