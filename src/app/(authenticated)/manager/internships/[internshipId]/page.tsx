@@ -59,24 +59,26 @@ export default async function AssignmentDetailPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        {/* Зафіксоване бічне меню при скролі */}
-        <div className="md:sticky md:top-24 md:self-start">
+        {/* Адаптивне зафіксоване меню без білої плашки */}
+        <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
           <Menu
             items={workspaceMenu}
             label="Internship navigation"
             className="md:flex-col md:overflow-visible"
           />
         </div>
-        <div className="space-y-10">
+
+        {/* min-w-0 запобігає вилазинню контенту в грідах */}
+        <div className="min-w-0 space-y-10">
           <section
             id="assignments"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
+            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-lg font-semibold">Assignments</h2>
                 {currentPlacement ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground truncate">
                     {currentPlacement.teamTitle} · started{" "}
                     {dateLabel(currentPlacement.startsAt)}
                   </p>
@@ -87,12 +89,14 @@ export default async function AssignmentDetailPage({
                 )}
               </div>
               {currentPlacement ? (
-                <AssignmentActions
-                  internshipId={internshipId}
-                  teamId={currentPlacement.teamId}
-                  teamTitle={currentPlacement.teamTitle}
-                  teammates={detail.teammates}
-                />
+                <div className="shrink-0">
+                  <AssignmentActions
+                    internshipId={internshipId}
+                    teamId={currentPlacement.teamId}
+                    teamTitle={currentPlacement.teamTitle}
+                    teammates={detail.teammates}
+                  />
+                </div>
               ) : null}
             </div>
             {assignments.length ? (
@@ -100,27 +104,32 @@ export default async function AssignmentDetailPage({
                 {assignments.map((assignment) => (
                   <article
                     key={assignment.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/40 p-4"
+                    className="flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-xl bg-muted/40 p-3.5 sm:p-4"
                   >
-                    <div className="grow">
-                      <p className="font-medium">{assignment.teammateName}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                    {/* Контейнер тексту з автоскороченням */}
+                    <div className="min-w-0 grow">
+                      <p className="truncate font-medium break-all">{assignment.teammateName}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
                         {assignment.responsibilities.join(", ") || "General teammate"} ·{" "}
                         {dateLabel(assignment.startsAt)} –{" "}
                         {dateLabel(assignment.endsAt)}
                       </p>
                     </div>
+
+                    {/* Кнопка або статус закріплені праворуч */}
                     {assignment.status !== "ended" ? (
-                      <TeammateAssignmentActions
-                        internshipId={internshipId}
-                        assignmentId={assignment.id}
-                        responsibilities={assignment.responsibilities}
-                      />
+                      <div className="shrink-0">
+                        <TeammateAssignmentActions
+                          internshipId={internshipId}
+                          assignmentId={assignment.id}
+                          responsibilities={assignment.responsibilities}
+                        />
+                      </div>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Ended</span>
+                      <span className="shrink-0 text-sm text-muted-foreground">Ended</span>
                     )}
                     {assignment.status === "scheduled" ? (
-                      <span className="text-sm text-muted-foreground">Scheduled</span>
+                      <span className="shrink-0 text-sm text-muted-foreground">Scheduled</span>
                     ) : null}
                   </article>
                 ))}
@@ -131,9 +140,11 @@ export default async function AssignmentDetailPage({
               </div>
             )}
           </section>
+
+          {/* Додано min-w-0 та overflow-hidden для фіксу обрізання кнопок всередині компонента */}
           <section
             id="feedback-cycles"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
           >
             <ManagerFeedbackPanel internshipId={internshipId} cycles={feedbackCycles} />
           </section>

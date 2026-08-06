@@ -70,7 +70,7 @@ function CycleCard({
   cycle: FeedbackCycleDto;
 }) {
   return (
-    <article className="space-y-4">
+    <article className="space-y-4 min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-semibold">
@@ -81,7 +81,9 @@ function CycleCard({
             {cycle.reviewers.length} reviewers
           </p>
         </div>
-        <div className="flex gap-2">
+
+        {/* Додано flex-wrap, щоб кнопки адаптивно переносилися на мобільних */}
+        <div className="flex flex-wrap items-center gap-2">
           <EditDueDate
             internshipId={internshipId}
             cycleId={cycle.id}
@@ -91,10 +93,11 @@ function CycleCard({
           <CancelCycle internshipId={internshipId} cycleId={cycle.id} />
         </div>
       </div>
+
       <div className="space-y-3">
         {cycle.reviewers.map((reviewer) => (
-          <details key={reviewer.reviewerUserId} className="rounded-lg bg-muted/40 p-3">
-            <summary className="cursor-pointer font-medium">
+          <details key={reviewer.reviewerUserId} className="rounded-lg bg-muted/40 p-3 min-w-0">
+            <summary className="cursor-pointer font-medium truncate break-all">
               {reviewer.reviewerDisplayName} ·{" "}
               <span className="font-normal text-muted-foreground">
                 {reviewer.status}
