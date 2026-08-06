@@ -1,6 +1,8 @@
 import { APIResponse } from "./types";
 
 export interface ProvisionUserParams {
+  firstName: string;
+  lastName: string;
   email: string;
   roles: string[];
 }
