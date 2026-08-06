@@ -3,6 +3,7 @@ import { requireInternPage } from "@/server/assignments/page-auth";
 import { getCurrentInternshipForIntern } from "@/server/assignments/service";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
+import Link from "next/link";
 
 export default async function InternPage() {
   const context = await requireInternPage();
@@ -17,11 +18,21 @@ export default async function InternPage() {
 
   return (
     <section className="space-y-7">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-[var(--brand-strong)]">
-          Intern workspace
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Intern dashboard</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--brand-strong)]">
+            Intern workspace
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Intern dashboard
+          </h1>
+        </div>
+        <Link
+          href={`/analytics?internId=${context.userId}`}
+          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
+        >
+          View analytics
+        </Link>
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">

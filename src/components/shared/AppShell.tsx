@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { AuthorizationContext } from "@/server/authorization/context";
 
-import { SignOutButton } from "@/features/auth/SignOutButton";
+import { SignOutButton } from "@/features/auth/ui/SignOutButton";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 export function AppShell({
   children,
@@ -30,15 +31,23 @@ export function AppShell({
             </span>
           </Link>
 
-          <div className="ml-auto min-w-0 text-right">
-            <p className="truncate text-sm font-medium">{identityName}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {context.access === "appUser"
-                ? context.appUser.roles.join(" · ")
-                : context.access}
-            </p>
+          <div className="ml-auto flex items-center gap-6">
+            <div className="min-w-0 text-right">
+              <p className="truncate text-sm font-medium">{identityName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {context.access === "appUser"
+                  ? context.appUser.roles.join(" · ")
+                  : context.access}
+              </p>
+            </div>
+
+            {context.access === "appUser" ? (
+              <div className="mx-5">
+                <NotificationBell />
+              </div>
+            ) : null}
+            <SignOutButton />
           </div>
-          <SignOutButton />
         </div>
       </header>
 
