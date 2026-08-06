@@ -87,11 +87,14 @@ export async function getInternAchievements(internId: string): Promise<InternAch
   const snapshot = await db
     .collection("intern_achievements")
     .where("internId", "==", internId)
-    .orderBy("createdAt", "desc")
     .get();
 
-  return snapshot.docs.map((doc) => ({
+  const achievements = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...(doc.data() as Omit<InternAchievement, "id">),
   }));
+
+  return achievements.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }

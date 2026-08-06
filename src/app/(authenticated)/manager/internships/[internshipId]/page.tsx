@@ -9,6 +9,13 @@ import { getManagedInternshipDetail } from "@/server/assignments/service";
 import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
 import { listManagerFeedbackCycles } from "@/server/feedback/service";
 
+import {
+  getAvailableAchievements,
+  getInternAchievements,
+} from "@/server/achievements/service";
+import { GiveAchievementModal } from "@/features/achievements/ui/GiveAchievementModal";
+import { AchievementsList } from "@/features/achievements/ui/AchievementsList";
+
 function dateLabel(value: { toDate(): Date } | undefined) {
   return value ? value.toDate().toLocaleDateString() : "Ongoing";
 }
@@ -20,10 +27,15 @@ export default async function AssignmentDetailPage({
 }) {
   const { internshipId } = await params;
   const context = await requireManagerPage();
-  const [detail, feedbackCycles] = await Promise.all([
-    getManagedInternshipDetail(internshipId, context.userId),
-    listManagerFeedbackCycles(internshipId, context.userId),
-  ]);
+
+  const [detail, feedbackCycles, availableAchievements, internAchievements] =
+    await Promise.all([
+      getManagedInternshipDetail(internshipId, context.userId),
+      listManagerFeedbackCycles(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
+    ]);
+
   const currentPlacement =
     detail.placements.find((placement) => placement.current) ?? detail.placements[0];
   const assignments = currentPlacement
@@ -31,6 +43,7 @@ export default async function AssignmentDetailPage({
         (assignment) => assignment.teamId === currentPlacement.teamId,
       )
     : [];
+
   const workspaceMenu = [
     {
       href: "#assignments",
@@ -39,6 +52,10 @@ export default async function AssignmentDetailPage({
     {
       href: "#feedback-cycles",
       label: "Feedback",
+    },
+    {
+      href: "#achievements",
+      label: "Achievements",
     },
   ];
 
@@ -59,7 +76,6 @@ export default async function AssignmentDetailPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        {/* Адаптивне зафіксоване меню без білої плашки */}
         <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
           <Menu
             items={workspaceMenu}
@@ -68,7 +84,6 @@ export default async function AssignmentDetailPage({
           />
         </div>
 
-        {/* min-w-0 запобігає вилазинню контенту в грідах */}
         <div className="min-w-0 space-y-10">
           <section
             id="assignments"
@@ -106,7 +121,6 @@ export default async function AssignmentDetailPage({
                     key={assignment.id}
                     className="flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-xl bg-muted/40 p-3.5 sm:p-4"
                   >
-                    {/* Контейнер тексту з автоскороченням */}
                     <div className="min-w-0 grow">
                       <p className="truncate font-medium break-all">{assignment.teammateName}</p>
                       <p className="mt-1 truncate text-sm text-muted-foreground">
@@ -116,7 +130,6 @@ export default async function AssignmentDetailPage({
                       </p>
                     </div>
 
-                    {/* Кнопка або статус закріплені праворуч */}
                     {assignment.status !== "ended" ? (
                       <div className="shrink-0">
                         <TeammateAssignmentActions
@@ -141,12 +154,31 @@ export default async function AssignmentDetailPage({
             )}
           </section>
 
-          {/* Додано min-w-0 та overflow-hidden для фіксу обрізання кнопок всередині компонента */}
           <section
             id="feedback-cycles"
             className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
           >
             <ManagerFeedbackPanel internshipId={internshipId} cycles={feedbackCycles} />
+          </section>
+
+          <section
+            id="achievements"
+            className="scroll-mt-24 min-w-0 space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Achievements</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Recognize and track the intern's milestones.
+                </p>
+              </div>
+              <GiveAchievementModal
+                internId={internshipId}
+                availableAchievements={availableAchievements}
+              />
+            </div>
+
+            <AchievementsList achievements={internAchievements} />
           </section>
         </div>
       </div>
