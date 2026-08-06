@@ -24,28 +24,19 @@ export default async function GuestDashboardPage() {
         </p>
       </div>
       {internships.length ? (
-        <div className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {internships.map((internship) => (
             <Link
               key={internship.internshipId}
               href={`/guest/internships/${internship.internshipId}`}
-              className="flex items-center justify-between rounded-2xl border bg-card p-5 shadow-sm transition hover:border-[var(--brand)]"
+              className="rounded-2xl border bg-card p-5 shadow-sm transition hover:border-[var(--brand)]"
             >
-              <div>
-                <p className="font-semibold">
-                  {internship.internDisplayName}
-                </p>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {internship.publishedCycleCount} published{" "}
-                  {internship.publishedCycleCount === 1 ? "cycle" : "cycles"} · Latest{" "}
-                  {date(internship.latestPublishedAt)}
-                </p>
-              </div>
-
-              <span className="text-sm text-muted-foreground">
-                View →
-              </span>
+              <p className="font-semibold">{internship.internDisplayName}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {internship.publishedCycleCount} published{" "}
+                {internship.publishedCycleCount === 1 ? "cycle" : "cycles"} · Latest{" "}
+                {date(internship.latestPublishedAt)}
+              </p>
             </Link>
           ))}
         </div>

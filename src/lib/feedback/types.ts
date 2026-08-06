@@ -71,7 +71,6 @@ export type FeedbackPublicationPreviewDto = {
 
 export type PublishedFeedbackDto = FeedbackPublicationPreviewDto & {
   internshipId: string;
-  internId: string;
   internDisplayName: string;
   cycleId: string;
   evaluationStartsAt: string;
