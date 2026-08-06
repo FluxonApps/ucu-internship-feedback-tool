@@ -3,6 +3,7 @@ import { requireInternPage } from "@/server/assignments/page-auth";
 import { getCurrentInternshipForIntern } from "@/server/assignments/service";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { listInternPublishedFeedback } from "@/server/feedback/service";
+import Link from "next/link";
 
 import { HealthScoreSection } from "@/features/feedback/ui/HealthScoreSection";
 
@@ -21,24 +22,39 @@ export default async function InternPage() {
 
   return (
     <section className="space-y-7">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-[var(--brand-strong)]">
-          Intern workspace
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Intern dashboard</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[var(--brand-strong)]">
+            Intern workspace
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Intern dashboard
+          </h1>
+        </div>
+        <Link
+          href={`/analytics?internId=${context.userId}`}
+          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
+        >
+          View analytics
+        </Link>
       </div>
       {internship ? (
         <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-          <div className="md:sticky md:top-24 md:self-start">
+          {/* Адаптивне зафіксоване меню без білої плашки */}
+          <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
             <Menu
               items={workspaceMenu}
               label="Intern dashboard navigation"
               className="md:flex-col md:overflow-visible"
             />
           </div>
-          <div className="space-y-10">
 
-            <section id="feedback" className="scroll-mt-24 space-y-6">
+          {/* min-w-0 запобігає вилазинню контенту в грідах */}
+          <div className="min-w-0 space-y-10">
+            <section
+              id="feedback"
+              className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+            >
               <div>
                 <h2 className="text-2xl font-semibold">Feedback</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -58,7 +74,7 @@ export default async function InternPage() {
 
             <section
               id="one-on-one-preparation"
-              className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
+              className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
             >
               <div>
                 <h2 className="text-lg font-semibold">1:1 Preparation</h2>
