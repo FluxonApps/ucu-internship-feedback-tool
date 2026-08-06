@@ -85,12 +85,6 @@ export default async function AssignmentDetailPage({
           >
             Analytics
           </Tabs.Tab>
-          <Tabs.Tab
-            value="casual-feedback"
-            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
-          >
-            Casual Feedback
-          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="assignments" keepMounted className="min-w-0 overflow-hidden">
@@ -103,7 +97,11 @@ export default async function AssignmentDetailPage({
           </section>
         </Tabs.Panel>
 
-        <Tabs.Panel value="achievements" keepMounted className="min-w-0 overflow-hidden">
+        <Tabs.Panel
+          value="achievements"
+          keepMounted
+          className="min-w-0 overflow-hidden"
+        >
           <AchievementsPanel
             internshipId={internshipId}
             availableAchievements={availableAchievements}
@@ -112,14 +110,6 @@ export default async function AssignmentDetailPage({
         </Tabs.Panel>
 
         <Tabs.Panel value="analytics" keepMounted className="min-w-0 overflow-hidden">
-          <p className="text-sm text-muted-foreground">To Do</p>
-        </Tabs.Panel>
-
-        <Tabs.Panel
-          value="casual-feedback"
-          keepMounted
-          className="min-w-0 overflow-hidden"
-        >
           <p className="text-sm text-muted-foreground">To Do</p>
         </Tabs.Panel>
       </Tabs.Root>
