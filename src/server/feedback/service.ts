@@ -330,7 +330,7 @@ export async function publishFeedbackCycle(
       type: "feedbackPublished",
       title: "New feedback published",
       message: "Your feedback results are now available.",
-      href: `/intern/internships/${internshipId}`,
+      href: "/intern",
       internshipId,
       feedbackCycleId: cycleId,
       deduplicationKey: `feedback-published:${cycleId}:${internId}`,
@@ -492,6 +492,19 @@ export async function cancelFeedbackCycle(
 
   const reviewers = await cycleRef.collection("reviewers").get();
 
+  const internship = await internshipRef.get();
+
+  const internId = internship.data()?.internId as string | undefined;
+
+  const intern = internId
+    ? await adminFirestore.collection("users").doc(internId).get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists && typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
+
   await adminFirestore.runTransaction(async (transaction) => {
     const cycle = await transaction.get(cycleRef);
 
@@ -518,8 +531,8 @@ export async function cancelFeedbackCycle(
         type: "feedbackCycleCancelled",
         title: "Feedback cycle cancelled",
         message: reason
-          ? `The feedback cycle has been cancelled. Reason: ${reason}`
-          : "The feedback cycle has been cancelled.",
+          ? `The feedback cycle for ${internDisplayName} has been cancelled. Reason: ${reason}`
+          : `The feedback cycle for ${internDisplayName} has been cancelled.`,
         href: `/teammate/internships/${internshipId}`,
         internshipId,
         feedbackCycleId: cycleId,
@@ -557,6 +570,25 @@ async function writeOwnResponse(
     ? await internshipRef.collection("managerAssignments").get()
     : undefined;
 
+  const cycleReviewers = submit
+    ? await cycleRef.collection("reviewers").get()
+    : undefined;
+
+  const internship = submit
+    ? await internshipRef.get()
+    : undefined;
+
+  const internId = internship?.data()?.internId as string | undefined;
+
+  const intern = internId
+    ? await adminFirestore.collection("users").doc(internId).get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists && typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
+
   await adminFirestore.runTransaction(async (transaction) => {
     const [cycle, reviewer, response] = await Promise.all([
       transaction.get(cycleRef),
@@ -572,6 +604,17 @@ async function writeOwnResponse(
     }
     const cycleData = cycle.data() as CycleData;
     const reviewerData = reviewer.data() as ReviewerData;
+    const allOtherReviewersSubmitted =
+      submit &&
+      cycleReviewers?.docs.every((document) => {
+        if (document.id === reviewerUserId) {
+          return true;
+        }
+
+        const data = document.data() as ReviewerData;
+
+        return data.status === "submitted";
+      });
     if (feedbackCycleState(cycleData) !== "collecting") {
       throw new Error("This feedback cycle is no longer collecting responses.");
     }
@@ -609,18 +652,35 @@ async function writeOwnResponse(
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: reviewerUserId,
     });
+
     if (submit && managerAssignments) {
       managerAssignments.docs.forEach((managerAssignment) => {
         addNotificationToTransaction(transaction, {
           recipientUserId: managerAssignment.id,
           type: "feedbackSubmitted",
           title: "Feedback submitted",
-          message: `${reviewerData.reviewerDisplayNameSnapshot} submitted feedback.`,
+          message: `${reviewerData.reviewerDisplayNameSnapshot} submitted feedback for ${internDisplayName}.`,
           href: `/manager/internships/${internshipId}#feedback-cycles`,
           internshipId,
           feedbackCycleId: cycleId,
-          deduplicationKey: `feedback-submitted:${cycleId}:${reviewerUserId}:${managerAssignment.id}`,
+          deduplicationKey:
+            `feedback-submitted:${cycleId}:${reviewerUserId}:${managerAssignment.id}`,
         });
+
+        if (allOtherReviewersSubmitted) {
+          addNotificationToTransaction(transaction, {
+            recipientUserId: managerAssignment.id,
+            type: "allFeedbackSubmitted",
+            title: "All feedback received",
+            message:
+              `Everyone has submitted feedback for ${internDisplayName}.`,
+            href: `/manager/internships/${internshipId}#feedback-cycles`,
+            internshipId,
+            feedbackCycleId: cycleId,
+            deduplicationKey:
+              `all-feedback-submitted:${cycleId}:${managerAssignment.id}`,
+          });
+        }
       });
     }
   });
@@ -632,9 +692,14 @@ export function saveFeedbackDraft(
   reviewerUserId: string,
   answers: FeedbackAnswersInput,
 ) {
-  return writeOwnResponse(internshipId, cycleId, reviewerUserId, answers, false);
+  return writeOwnResponse(
+    internshipId,
+    cycleId,
+    reviewerUserId,
+    answers,
+    false,
+  );
 }
-
 export function submitFeedback(
   internshipId: string,
   cycleId: string,
