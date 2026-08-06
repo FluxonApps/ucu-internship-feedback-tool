@@ -69,6 +69,16 @@ export async function assignAchievementToIntern(params: {
   givenByUserId: string;
   achievement: { title: string; description: string; icon: string; achievementId: string };
 }) {
+  const existingDoc = await db
+    .collection("intern_achievements")
+    .where("internId", "==", params.internId)
+    .where("achievementId", "==", params.achievement.achievementId)
+    .get();
+
+  if (!existingDoc.empty) {
+    throw new Error("This achievement has already been awarded to this intern.");
+  }
+
   const newInternAchievement: Omit<InternAchievement, "id"> = {
     internId: params.internId,
     givenByUserId: params.givenByUserId,

@@ -12,17 +12,30 @@ import type { Achievement } from "@/server/achievements/service";
 interface GiveAchievementModalProps {
   internId: string;
   availableAchievements: Achievement[];
+  alreadyAwardedIds?: string[];
 }
 
 export function GiveAchievementModal({
   internId,
   availableAchievements,
+  alreadyAwardedIds = [],
 }: GiveAchievementModalProps) {
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pathname = usePathname();
+
+  const resetAndClose = (closeModal: () => void) => {
+    setError(null);
+    setSelectedAchievement(null);
+    closeModal();
+  };
+
+  const handleSelect = (item: Achievement) => {
+    setError(null);
+    setSelectedAchievement(item);
+  };
 
   const handleGive = async (closeModal: () => void) => {
     if (!selectedAchievement) return;
@@ -42,8 +55,7 @@ export function GiveAchievementModal({
     setIsSubmitting(false);
 
     if (result.success) {
-      setSelectedAchievement(null);
-      closeModal();
+      resetAndClose(closeModal);
     } else {
       setError(result.error || "Failed to give achievement");
     }
@@ -52,7 +64,7 @@ export function GiveAchievementModal({
   return (
     <Modal
       trigger={
-        <Button type="button">
+        <Button type="button" onClick={() => setError(null)}>
           <Plus data-icon="inline-start" /> Give achievement
         </Button>
       }
@@ -67,17 +79,21 @@ export function GiveAchievementModal({
             </div>
           )}
 
-          {/* Список ачівок для вибору */}
           <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
             {availableAchievements.map((item) => {
+              const isAlreadyGiven = alreadyAwardedIds.includes(item.id);
               const isSelected = selectedAchievement?.id === item.id;
+
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setSelectedAchievement(item)}
+                  disabled={isAlreadyGiven}
+                  onClick={() => handleSelect(item)}
                   className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all ${
-                    isSelected
+                    isAlreadyGiven
+                      ? "opacity-50 cursor-not-allowed bg-muted/20 border-border"
+                      : isSelected
                       ? "border-primary bg-accent shadow-sm"
                       : "border-border bg-card hover:bg-accent/50"
                   }`}
@@ -86,7 +102,14 @@ export function GiveAchievementModal({
                     <Award className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">{item.title}</p>
+                    <p className="font-medium text-foreground">
+                      {item.title}{" "}
+                      {isAlreadyGiven && (
+                        <span className="text-xs font-normal text-muted-foreground">
+                          (Already awarded)
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">{item.description}</p>
                   </div>
                   {isSelected && <Check className="h-5 w-5 text-primary" />}
@@ -99,10 +122,7 @@ export function GiveAchievementModal({
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                setSelectedAchievement(null);
-                close();
-              }}
+              onClick={() => resetAndClose(close)}
               disabled={isSubmitting}
             >
               Cancel
