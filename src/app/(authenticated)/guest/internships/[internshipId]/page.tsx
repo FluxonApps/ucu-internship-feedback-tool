@@ -4,7 +4,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
 import { requireGuestPage } from "@/server/feedback/page-auth";
 import { listGuestPublishedFeedback } from "@/server/feedback/service";
-import Link from "next/link";
+import { AnalyticsPanel } from "@/features/feedback/ui/AnalyticsPanel";
 
 // 1. Імпортуємо сервіс завантаження ачівок та UI-компонент списку
 import { getInternAchievements } from "@/server/achievements/service";
@@ -54,12 +54,6 @@ export default async function GuestInternshipFeedbackPage({
             {publications[0].internDisplayName}
           </h1>
         </div>
-        <Link
-          href={`/analytics?internshipId=${internshipId}`}
-          className="rounded-xl border px-4 py-2 text-sm font-medium transition hover:border-[var(--brand)]"
-        >
-          View analytics
-        </Link>
       </div>
 
       {latestPublication && (
@@ -85,6 +79,21 @@ export default async function GuestInternshipFeedbackPage({
           </p>
         </div>
         <AchievementsList achievements={achievements} />
+      </section>
+            <section className="space-y-4 rounded-2xl border bg-card p-6">
+        <div>
+          <h2 className="text-lg font-semibold">
+            Analytics
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Internship progress and feedback trends.
+          </p>
+        </div>
+
+        <AnalyticsPanel
+          internshipId={internshipId}
+          internId={publications[0].internId}
+        />
       </section>
     </section>
   );
