@@ -2,18 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  Award,
-  Plus,
-  Check,
-  Trophy,
-  Star,
-  Zap,
-  Flame,
-  Target,
-  Sparkles,
-  Smile,
-} from "lucide-react";
+import { Award, Plus, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -22,17 +11,6 @@ import {
   createAndAssignCustomAchievementAction,
 } from "../api/actions";
 import type { Achievement } from "@/server/achievements/service";
-
-const ICON_OPTIONS = [
-  { id: "award", icon: Award, label: "Award" },
-  { id: "trophy", icon: Trophy, label: "Trophy" },
-  { id: "star", icon: Star, label: "Star" },
-  { id: "zap", icon: Zap, label: "Zap" },
-  { id: "flame", icon: Flame, label: "Flame" },
-  { id: "target", icon: Target, label: "Target" },
-  { id: "sparkles", icon: Sparkles, label: "Sparkles" },
-  { id: "smile", icon: Smile, label: "Smile" },
-];
 
 interface GiveAchievementModalProps {
   internId: string;
@@ -51,7 +29,6 @@ export function GiveAchievementModal({
 
   const [customTitle, setCustomTitle] = useState("");
   const [customDescription, setCustomDescription] = useState("");
-  const [customIcon, setCustomIcon] = useState("award");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +40,6 @@ export function GiveAchievementModal({
     setSelectedAchievement(null);
     setCustomTitle("");
     setCustomDescription("");
-    setCustomIcon("award");
     setMode("select");
     closeModal();
   };
@@ -104,7 +80,7 @@ export function GiveAchievementModal({
         internId,
         title: customTitle.trim(),
         description: customDescription.trim(),
-        icon: customIcon,
+        icon: "award",
         pathToRevalidate: pathname,
       });
     }
@@ -239,28 +215,6 @@ export function GiveAchievementModal({
                   rows={2}
                   className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Choose Icon
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {ICON_OPTIONS.map(({ id, icon: IconComponent }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setCustomIcon(id)}
-                      className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
-                        customIcon === id
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-card hover:bg-accent text-muted-foreground"
-                      }`}
-                    >
-                      <IconComponent className="h-5 w-5" />
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           )}
