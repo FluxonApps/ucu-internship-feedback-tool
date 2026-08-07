@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Tabs } from "@base-ui/react/tabs";
 
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { PublishedFeedbackHistory } from "@/features/feedback/ui/PublishedFeedbackHistory";
@@ -56,45 +57,75 @@ export default async function GuestInternshipFeedbackPage({
         </div>
       </div>
 
-      {latestPublication && (
-        <HealthScoreSection publication={latestPublication} />
-      )}
-
-      <section className="space-y-4 rounded-2xl border bg-card p-6">
-        <div>
-          <h2 className="text-lg font-semibold">Feedback history</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Published assessments and recommendations, newest first.
-          </p>
-        </div>
-        <PublishedFeedbackHistory publications={publications} />
-      </section>
-
-      {/* 3. Нова секція Achievements для гостей (тільки перегляд) */}
-      <section className="space-y-4 rounded-2xl border bg-card p-6">
-        <div>
-          <h2 className="text-lg font-semibold">Achievements</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Achievements awarded during this internship.
-          </p>
-        </div>
-        <AchievementsList achievements={achievements} />
-      </section>
-            <section className="space-y-4 rounded-2xl border bg-card p-6">
-        <div>
-          <h2 className="text-lg font-semibold">
+      <Tabs.Root defaultValue="feedback" className="min-w-0 space-y-6">
+        <Tabs.List
+          aria-label="Internship workspace"
+          activateOnFocus
+          className="flex gap-7 overflow-x-auto border-b"
+        >
+          <Tabs.Tab
+            value="feedback"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Feedback
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="achievements"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Achievements
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="analytics"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
             Analytics
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Internship progress and feedback trends.
-          </p>
-        </div>
+          </Tabs.Tab>
+        </Tabs.List>
 
-        <AnalyticsPanel
-          internshipId={internshipId}
-          internId={publications[0].internId}
-        />
-      </section>
+        <Tabs.Panel value="feedback" keepMounted className="min-w-0 overflow-hidden space-y-4">
+          {latestPublication && (
+            <HealthScoreSection publication={latestPublication} />
+          )}
+
+          <div className="space-y-4 rounded-2xl border bg-card p-6">
+            <div>
+              <h2 className="text-lg font-semibold">Feedback history</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Published assessments and recommendations, newest first.
+              </p>
+            </div>
+            <PublishedFeedbackHistory publications={publications} />
+          </div>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="achievements" keepMounted className="min-w-0 overflow-hidden space-y-4">
+          {/* 3. Нова секція Achievements для гостей (тільки перегляд) */}
+          <div>
+            <h2 className="text-lg font-semibold">Achievements</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Achievements awarded during this internship.
+            </p>
+          </div>
+          <AchievementsList achievements={achievements} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="analytics" keepMounted className="min-w-0 overflow-hidden space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">
+              Analytics
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Internship progress and feedback trends.
+            </p>
+          </div>
+
+          <AnalyticsPanel
+            internshipId={internshipId}
+            internId={publications[0].internId}
+          />
+        </Tabs.Panel>
+      </Tabs.Root>
     </section>
   );
 }
