@@ -8,7 +8,8 @@ export type NotificationType =
   | "feedbackDueToday"
   | "feedbackOverdue"
   | "assignmentStarted"
-  | "assignmentUpdated";
+  | "assignmentUpdated"
+    | "assignmentEnded";
 
 export type CreateNotificationInput = {
   recipientUserId: string;
