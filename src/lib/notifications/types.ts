@@ -1,11 +1,14 @@
 export type NotificationType =
   | "feedbackCycleStarted"
+  | "feedbackCycleCancelled"
   | "feedbackSubmitted"
   | "allFeedbackSubmitted"
   | "feedbackPublished"
   | "feedbackDueSoon"
   | "feedbackDueToday"
-  | "feedbackOverdue";
+  | "feedbackOverdue"
+  | "assignmentStarted"
+  | "assignmentUpdated";
 
 export type CreateNotificationInput = {
   recipientUserId: string;

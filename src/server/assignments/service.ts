@@ -24,6 +24,7 @@ import {
   teammateResponsibilities,
   type TeammateResponsibility,
 } from "@/lib/teammate-responsibilities";
+import { addNotificationToTransaction } from "@/server/notifications/service";
 
 export const responsibilitySchema = z.enum(
   teammateResponsibilities.map(({ value }) => value) as [
@@ -158,6 +159,28 @@ async function getEligibleUser(
     throw new Error("The selected user is not eligible for this assignment.");
   }
   return data;
+}
+
+function formatResponsibilities(responsibilities: string[]) {
+  const labels: Record<string, string> = {
+    mentor: "Mentor",
+    projectManager: "Project Manager",
+    teamLead: "Team Lead",
+  };
+
+  const roles = responsibilities.map(
+    (role) => labels[role] ?? role,
+  );
+
+  if (roles.length === 1) {
+    return roles[0];
+  }
+
+  if (roles.length === 2) {
+    return `${roles[0]} and ${roles[1]}`;
+  }
+
+  return `${roles.slice(0, -1).join(", ")} and ${roles.at(-1)}`;
 }
 
 export async function listManagedInternships(managerId: string) {
@@ -476,9 +499,9 @@ export async function addTeamPlacement(
 
     let ongoing:
       | (DateRange & {
-          teamId: string;
-          ref: FirebaseFirestore.DocumentReference;
-        })
+        teamId: string;
+        ref: FirebaseFirestore.DocumentReference;
+      })
       | undefined;
 
     if (overlappingPlacement) {
@@ -551,6 +574,16 @@ export async function addTeammateAssignment(
   assertValidRange(input);
   const internshipRef = await requireManagedInternship(internshipId, managerId);
   const eligibleUser = await getEligibleUser(input.teammateUserId, "teammate");
+  const internship = await internshipRef.get();
+  const internId = internship.data()?.internId as string | undefined;
+  const intern = internId
+    ? await adminFirestore.collection("users").doc(internId).get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists && typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
   if (input.teammateUserId === managerId)
     throw new Error("A manager cannot be assigned as a teammate.");
   await adminFirestore.runTransaction(async (transaction) => {
@@ -582,12 +615,27 @@ export async function addTeammateAssignment(
       throw new Error(
         "This teammate already has an overlapping assignment for this Team.",
       );
-    transaction.create(internshipRef.collection("teammateAssignments").doc(), {
+    const assignmentRef = internshipRef
+      .collection("teammateAssignments")
+      .doc();
+    transaction.create(assignmentRef, {
       ...input,
       createdAt: FieldValue.serverTimestamp(),
       createdBy: managerId,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: managerId,
+    });
+
+    addNotificationToTransaction(transaction, {
+      recipientUserId: input.teammateUserId,
+      type: "assignmentStarted",
+      title: "New assignment",
+      message: `You have been assigned as ${formatResponsibilities(
+        input.responsibilities,
+      )} for ${internDisplayName}.`,
+      href: `/teammate/internships/${internshipId}`,
+      internshipId,
+      deduplicationKey: `assignment-started:${assignmentRef.id}:${input.teammateUserId}`,
     });
   });
   return { displayName: eligibleUser.displayName };
@@ -601,18 +649,102 @@ export async function updateTeammateResponsibilities(
     typeof updateResponsibilitiesInputSchema
   >["responsibilities"],
 ) {
-  const internshipRef = await requireManagedInternship(internshipId, managerId);
+  const internshipRef = await requireManagedInternship(
+    internshipId,
+    managerId,
+  );
+
   const assignmentRef = internshipRef
     .collection("teammateAssignments")
     .doc(assignmentId);
-  const assignment = await assignmentRef.get();
-  if (!assignment.exists) throw new Error("Teammate assignment not found.");
-  if (assignmentStatus(assignment.data() as DateRange) === "ended")
-    throw new Error("Ended assignments cannot be edited.");
-  await assignmentRef.update({
-    responsibilities,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: managerId,
+
+  const internship = await internshipRef.get();
+  const internId = internship.data()?.internId as string | undefined;
+
+  const intern = internId
+    ? await adminFirestore.collection("users").doc(internId).get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists && typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
+
+  const addedNotificationKey =
+    `assignment-role-added:${adminFirestore
+      .collection("notifications")
+      .doc().id}`;
+
+  const removedNotificationKey =
+    `assignment-role-removed:${adminFirestore
+      .collection("notifications")
+      .doc().id}`;
+
+  await adminFirestore.runTransaction(async (transaction) => {
+    const assignment = await transaction.get(assignmentRef);
+
+    if (!assignment.exists) {
+      throw new Error("Teammate assignment not found.");
+    }
+
+    if (assignmentStatus(assignment.data() as DateRange) === "ended") {
+      throw new Error("Ended assignments cannot be edited.");
+    }
+
+    const assignmentData = assignment.data() as DateRange & {
+      teammateUserId: string;
+      responsibilities: TeammateResponsibility[];
+    };
+
+    const previousResponsibilities =
+      assignmentData.responsibilities ?? [];
+
+    const addedResponsibilities = responsibilities.filter(
+      (responsibility) =>
+        !previousResponsibilities.includes(responsibility),
+    );
+
+    const removedResponsibilities = previousResponsibilities.filter(
+      (responsibility) =>
+        !responsibilities.includes(responsibility),
+    );
+
+    transaction.update(assignmentRef, {
+      responsibilities,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: managerId,
+    });
+
+    if (addedResponsibilities.length > 0) {
+      addNotificationToTransaction(transaction, {
+        recipientUserId: assignmentData.teammateUserId,
+        type: "assignmentUpdated",
+        title: "Assignment updated",
+        message: `You have also been assigned as ${formatResponsibilities(
+          addedResponsibilities,
+        )} for ${internDisplayName}.`,
+        href: `/teammate/internships/${internshipId}`,
+        internshipId,
+        deduplicationKey: addedNotificationKey,
+      });
+    }
+    if (removedResponsibilities.length > 0) {
+      const allRolesRemoved = responsibilities.length === 0;
+
+      addNotificationToTransaction(transaction, {
+        recipientUserId: assignmentData.teammateUserId,
+        type: "assignmentUpdated",
+        title: "Assignment updated",
+        message: allRolesRemoved
+          ? `All of your roles for ${internDisplayName} have been removed.`
+          : `You are no longer assigned as ${formatResponsibilities(
+            removedResponsibilities,
+          )} for ${internDisplayName}.`,
+        href: `/teammate/internships/${internshipId}`,
+        internshipId,
+        deduplicationKey: removedNotificationKey,
+      });
+    }
   });
 }
 
@@ -621,17 +753,62 @@ export async function closeTeammateAssignment(
   assignmentId: string,
   managerId: string,
 ) {
-  const internshipRef = await requireManagedInternship(internshipId, managerId);
+  const internshipRef = await requireManagedInternship(
+    internshipId,
+    managerId,
+  );
+
   const assignmentRef = internshipRef
     .collection("teammateAssignments")
     .doc(assignmentId);
-  const assignment = await assignmentRef.get();
-  if (!assignment.exists) throw new Error("Teammate assignment not found.");
-  if ((assignment.data() as DateRange).endsAt) return;
-  await assignmentRef.update({
-    endsAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: managerId,
+
+  const internship = await internshipRef.get();
+  const internId = internship.data()?.internId as string | undefined;
+
+  const intern = internId
+    ? await adminFirestore
+        .collection("users")
+        .doc(internId)
+        .get()
+    : undefined;
+
+  const internDisplayName =
+    intern?.exists &&
+    typeof intern.data()?.displayName === "string"
+      ? (intern.data()?.displayName as string)
+      : "the intern";
+
+  await adminFirestore.runTransaction(async (transaction) => {
+    const assignment = await transaction.get(assignmentRef);
+
+    if (!assignment.exists) {
+      throw new Error("Teammate assignment not found.");
+    }
+
+    const assignmentData = assignment.data() as DateRange & {
+      teammateUserId: string;
+    };
+
+    if (assignmentData.endsAt) {
+      return;
+    }
+
+    transaction.update(assignmentRef, {
+      endsAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: managerId,
+    });
+
+    addNotificationToTransaction(transaction, {
+      recipientUserId: assignmentData.teammateUserId,
+      type: "assignmentEnded",
+      title: "Assignment ended",
+      message: `You are no longer assigned to ${internDisplayName}.`,
+      href: "/teammate",
+      internshipId,
+      deduplicationKey:
+        `assignment-ended:${assignmentId}:${assignmentData.teammateUserId}`,
+    });
   });
 }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { NotificationDto } from "@/lib/notifications/types";
@@ -14,73 +14,114 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    async function loadNotifications() {
+    let cancelled = false;
+
+    async function loadNotifications(showLoading = false) {
+      if (showLoading) {
+        setLoading(true);
+      }
+
       try {
-        const response = await fetch("/api/notifications");
+        const response = await fetch("/api/notifications", {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           return;
         }
 
         const data = (await response.json()) as NotificationDto[];
-        setNotifications(data);
+
+        if (!cancelled) {
+          setNotifications(data);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && showLoading) {
+          setLoading(false);
+        }
       }
     }
 
-    void loadNotifications();
+    void loadNotifications(true);
+
+    const intervalId = window.setInterval(() => {
+      void loadNotifications();
+    }, 30_000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadNotifications();
+      }
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
   }, []);
 
   const unreadCount = notifications.filter(
     (notification) => !notification.readAt,
   ).length;
 
+  const hasReadNotifications = notifications.some(
+    (notification) => Boolean(notification.readAt),
+  );
+
   async function markAsRead(
     notificationId: string,
     href: string,
-) {
-  const notification = notifications.find(
-    (item) => item.id === notificationId,
-  );
-
-  if (!notification) {
-    return;
-  }
-
-  if (!notification.readAt) {
-    const response = await fetch(
-      `/api/notifications/${encodeURIComponent(notificationId)}`,
-      {
-        method: "PATCH",
-      },
+  ) {
+    const notification = notifications.find(
+      (item) => item.id === notificationId,
     );
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
-    console.error(
-      body?.error ?? `Unable to mark notification as read (${response.status}).`,
-    );
+    if (!notification) {
       return;
     }
 
-    const readAt = new Date().toISOString();
+    if (!notification.readAt) {
+      const response = await fetch(
+        `/api/notifications/${encodeURIComponent(notificationId)}`,
+        {
+          method: "PATCH",
+        },
+      );
 
-    setNotifications((current) =>
-      current.map((item) =>
-        item.id === notificationId
-          ? {
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        console.error(
+          body?.error ?? `Unable to mark notification as read (${response.status}).`,
+        );
+        return;
+      }
+
+      const readAt = new Date().toISOString();
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notificationId
+            ? {
               ...item,
               readAt,
             }
-          : item,
-      ),
-    );
-  }
-  setOpen(false);
-  router.push(href);
+            : item,
+        ),
+      );
+    }
+    setOpen(false);
+    router.push(href);
   }
   async function markAllAsRead() {
     const response = await fetch("/api/notifications", {
@@ -111,13 +152,64 @@ export function NotificationBell() {
     setOpen(false);
   }
 
+  async function clearReadNotifications() {
+    const response = await fetch("/api/notifications/read", {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      console.error(
+        body?.error ?? "Unable to delete read notifications.",
+      );
+
+      return;
+    }
+
+    setNotifications((current) =>
+      current.filter((notification) => !notification.readAt),
+    );
+  }
+
+  async function deleteSingleNotification(
+    notificationId: string,
+  ) {
+    const response = await fetch(
+      `/api/notifications/${encodeURIComponent(notificationId)}`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      console.error(
+        body?.error ?? "Unable to delete notification.",
+      );
+
+      return;
+    }
+
+    setNotifications((current) =>
+      current.filter(
+        (notification) => notification.id !== notificationId,
+      ),
+    );
+  }
+
   return (
     <details
-    className="relative"
-    open={open}
-    onToggle={(event) => {
+      className="relative"
+      open={open}
+      onToggle={(event) => {
         setOpen(event.currentTarget.open);
-    }}
+      }}
     >
       <summary
         aria-label="Notifications"
@@ -136,17 +228,31 @@ export function NotificationBell() {
         <div className="flex items-center justify-between border-b px-4 py-3">
           <p className="font-semibold">Notifications</p>
 
-          {unreadCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => {
-                void markAllAsRead();
-              }}
-              className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
-            >
-              Mark all as read
-            </button>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void markAllAsRead();
+                }}
+                className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
+              >
+                Mark all as read
+              </button>
+            ) : null}
+
+            {hasReadNotifications ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void clearReadNotifications();
+                }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Clear read
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="max-h-96 overflow-y-auto">
@@ -160,40 +266,60 @@ export function NotificationBell() {
             </p>
           ) : (
             notifications.map((notification) => (
-              <Link
+              <div
                 key={notification.id}
-                href={notification.href}
-                onClick={(event) => {
-                    event.preventDefault();
-                    void markAsRead(
-                        notification.id,
-                        notification.href
-                    );
-                }}
-                className={`block border-b px-4 py-3 last:border-b-0 hover:bg-muted/60 ${
-                  notification.readAt ? "" : "bg-[var(--brand-soft)]/40"
-                }`}
+                className={`relative border-b last:border-b-0 hover:bg-muted/60 ${notification.readAt
+                  ? ""
+                  : "bg-[var(--brand-soft)]/40"
+                  }`}
               >
-                <div className="flex gap-3">
-                  {!notification.readAt ? (
-                    <span className="mt-2 size-2 shrink-0 rounded-full bg-[var(--brand-strong)]" />
-                  ) : (
-                    <span className="mt-2 size-2 shrink-0" />
-                  )}
+                <Link
+                  href={notification.href}
+                  onClick={(event) => {
+                    event.preventDefault();
 
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {notification.title}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {notification.message}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {new Date(notification.createdAt).toLocaleString("en-GB")}
-                    </p>
+                    void markAsRead(
+                      notification.id,
+                      notification.href,
+                    );
+                  }}
+                  className="block px-4 py-3 pr-11"
+                >
+                  <div className="flex gap-3">
+                    {!notification.readAt ? (
+                      <span className="mt-2 size-2 shrink-0 rounded-full bg-[var(--brand-strong)]" />
+                    ) : (
+                      <span className="mt-2 size-2 shrink-0" />
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {notification.title}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {notification.message}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {new Date(notification.createdAt).toLocaleString(
+                          "en-GB",
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+                {notification.readAt ? (
+                  <button
+                    type="button"
+                    aria-label="Delete notification"
+                    onClick={() => {
+                      void deleteSingleNotification(notification.id);
+                    }}
+                    className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                ) : null}
+              </div>
             ))
           )}
         </div>

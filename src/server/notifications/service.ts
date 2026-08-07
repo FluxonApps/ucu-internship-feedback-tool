@@ -149,3 +149,55 @@ export async function markAllNotificationsAsRead(
 
   await batch.commit();
 }
+
+export async function deleteReadNotifications(
+  userId: string,
+): Promise<void> {
+  const snapshot = await adminFirestore
+    .collection("notifications")
+    .where("recipientUserId", "==", userId)
+    .get();
+
+  const readNotifications = snapshot.docs.filter((document) => {
+    const data = document.data() as NotificationData;
+
+    return Boolean(data.readAt);
+  });
+
+  if (!readNotifications.length) {
+    return;
+  }
+
+  const batch = adminFirestore.batch();
+
+  readNotifications.forEach((document) => {
+    batch.delete(document.ref);
+  });
+
+  await batch.commit();
+}
+
+export async function deleteNotification(
+  notificationId: string,
+  userId: string,
+): Promise<void> {
+  const notificationRef = adminFirestore
+    .collection("notifications")
+    .doc(notificationId);
+
+  await adminFirestore.runTransaction(async (transaction) => {
+    const notification = await transaction.get(notificationRef);
+
+    if (!notification.exists) {
+      throw new Error("Notification was not found.");
+    }
+
+    const data = notification.data() as NotificationData;
+
+    if (data.recipientUserId !== userId) {
+      throw new Error("You cannot delete this notification.");
+    }
+
+    transaction.delete(notificationRef);
+  });
+}
