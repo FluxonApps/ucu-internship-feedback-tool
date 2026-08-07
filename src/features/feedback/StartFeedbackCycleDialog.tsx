@@ -33,13 +33,6 @@ function StartFeedbackCycleForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-
-  // --- Нові стейти для розкладу ---
-  const [startMode, setStartMode] = useState<"now" | "schedule">("now");
-  const [scheduleType, setScheduleType] = useState<"automatic" | "reminder">("automatic");
-  const [triggerAt, setTriggerAt] = useState("");
-
-  // --- Існуючі стейти для самого циклу ---
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -50,59 +43,36 @@ function StartFeedbackCycleForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
-
-    // Базова валідація
     if (!startsAt || !endsAt) {
       setError("Choose the evaluation start and end dates.");
       return;
     }
-
-    if (startMode === "schedule" && !triggerAt) {
-      setError("Choose the date when this schedule should trigger.");
-      return;
-    }
-
     setSubmitting(true);
-
     try {
-      // Визначаємо, куди і що саме ми відправляємо
-      const isSchedule = startMode === "schedule";
-      const endpoint = isSchedule
-        ? `/api/manager/internships/${internshipId}/feedback-schedules`
-        : `/api/manager/internships/${internshipId}/feedback-cycles`;
-
-      // Формуємо шаблон циклу (він потрібен в обох випадках)
-      const cycleTemplate = {
-        evaluationStartsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
-        evaluationEndsAt: new Date(`${endsAt}T00:00:00.000Z`).toISOString(),
-        ...(dueAt ? { dueAt: new Date(`${dueAt}T00:00:00.000Z`).toISOString() } : {}),
-        customQuestions: questions.map((q) => ({ id: crypto.randomUUID(), prompt: q })), // додаємо ID для customQuestions
-      };
-
-      // Якщо це розклад, обгортаємо шаблон у додаткові поля розкладу
-      const bodyPayload = isSchedule
-        ? {
-            type: scheduleType,
-            triggerAt: new Date(`${triggerAt}T00:00:00.000Z`).toISOString(),
-            cycleTemplate: cycleTemplate,
-          }
-        : cycleTemplate;
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(bodyPayload),
-      });
-
+      const response = await fetch(
+        `/api/manager/internships/${internshipId}/feedback-cycles`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            evaluationStartsAt: new Date(`${startsAt}T00:00:00.000Z`).toISOString(),
+            evaluationEndsAt: new Date(`${endsAt}T00:00:00.000Z`).toISOString(),
+            ...(dueAt
+              ? { dueAt: new Date(`${dueAt}T00:00:00.000Z`).toISOString() }
+              : {}),
+            customQuestions: questions,
+          }),
+        },
+      );
       const body = await response.json();
       if (!response.ok) {
-        setError(body.error ?? "Unable to process your request.");
+        setError(body.error ?? "Unable to start the feedback cycle.");
         return;
       }
       onSuccess();
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Unable to start the feedback cycle. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -110,69 +80,6 @@ function StartFeedbackCycleForm({
 
   return (
     <form onSubmit={submit} className="space-y-5">
-
-      {/* 1. Блок вибору режиму */}
-      <fieldset className="space-y-3 pb-4 border-b">
-        <legend className="text-sm font-medium">Execution timing</legend>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              checked={startMode === "now"}
-              onChange={() => setStartMode("now")}
-            />
-            Start cycle immediately
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              checked={startMode === "schedule"}
-              onChange={() => setStartMode("schedule")}
-            />
-            Schedule for later
-          </label>
-        </div>
-      </fieldset>
-
-      {/* 2. Блок налаштувань розкладу (видно тільки якщо обрали "schedule") */}
-      {startMode === "schedule" && (
-        <fieldset className="space-y-4 rounded-lg border bg-muted/50 p-4">
-          <legend className="sr-only">Schedule settings</legend>
-          <label className="grid gap-2 text-sm font-medium">
-            Trigger date
-            <input
-              type="date"
-              required={startMode === "schedule"}
-              value={triggerAt}
-              onChange={(event) => setTriggerAt(event.target.value)}
-              className="h-10 rounded-lg border bg-background px-3"
-            />
-          </label>
-          <div className="grid gap-2">
-            <span className="text-sm font-medium">Action type</span>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={scheduleType === "automatic"}
-                  onChange={() => setScheduleType("automatic")}
-                />
-                Auto-start cycle
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={scheduleType === "reminder"}
-                  onChange={() => setScheduleType("reminder")}
-                />
-                Just remind me
-              </label>
-            </div>
-          </div>
-        </fieldset>
-      )}
-
-      {/* 3. Блок налаштувань самого циклу (дати і питання) */}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">
           Evaluation starts
@@ -247,15 +154,13 @@ function StartFeedbackCycleForm({
           </div>
         ))}
       </fieldset>
-
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : null}
-
       <Button type="submit" disabled={submitting}>
-        {submitting ? "Processing…" : startMode === "schedule" ? "Schedule cycle" : "Start cycle"}
+        {submitting ? "Starting…" : "Start cycle"}
       </Button>
     </form>
   );

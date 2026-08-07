@@ -1,12 +1,18 @@
 import "server-only";
 
+import { Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 
-import {
-  auditFieldsSchema,
-  firestoreTimestampSchema,
-  teammateResponsibilitySchema,
-} from "@/server/shared/models";
+import { teammateResponsibilities } from "@/lib/teammate-responsibilities";
+
+export const firestoreTimestampSchema = z.instanceof(Timestamp);
+
+export const auditFieldsSchema = z.object({
+  createdAt: firestoreTimestampSchema,
+  createdBy: z.string().min(1),
+  updatedAt: firestoreTimestampSchema,
+  updatedBy: z.string().min(1),
+});
 
 export const internshipStatusSchema = z.enum(["active", "completed", "archived"]);
 
@@ -43,6 +49,13 @@ export const teamPlacementDocumentSchema = datedAssignmentDocumentSchema.extend(
 });
 
 export type TeamPlacementDocument = z.infer<typeof teamPlacementDocumentSchema>;
+
+export const teammateResponsibilitySchema = z.enum(
+  teammateResponsibilities.map(({ value }) => value) as [
+    (typeof teammateResponsibilities)[number]["value"],
+    ...(typeof teammateResponsibilities)[number]["value"][],
+  ],
+);
 
 export const teammateAssignmentDocumentSchema = datedAssignmentDocumentSchema.extend({
   teammateUserId: z.string().min(1),
