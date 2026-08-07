@@ -9,7 +9,7 @@ export type NotificationType =
   | "feedbackOverdue"
   | "assignmentStarted"
   | "assignmentUpdated"
-    | "assignmentEnded";
+  | "assignmentEnded";
 
 export type CreateNotificationInput = {
   recipientUserId: string;

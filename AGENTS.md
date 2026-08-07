@@ -40,6 +40,14 @@ Group feature-specific code by feature within each application layer:
 Place code in a cross-cutting shared location only when it is genuinely used by
 multiple features.
 
+## Firestore models
+
+Every feature that persists Firestore documents must define its canonical
+persisted-document schemas and inferred types in
+`src/server/{feature}/models.ts`. Services must parse Firestore reads with
+those schemas instead of using anonymous `as { ... }` casts. Keep browser-safe
+DTOs separate in `src/lib/{feature}/types.ts`.
+
 Keep feature-specific UI components and client-side API helpers organized
 within the corresponding feature directory. Place UI components in
 `src/features/{feature}/ui/` and client-side API helpers in
