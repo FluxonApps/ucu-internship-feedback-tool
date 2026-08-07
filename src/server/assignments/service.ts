@@ -14,9 +14,11 @@ import {
   managerAssignmentDocumentSchema,
   teamDocumentSchema,
   teammateAssignmentDocumentSchema,
-  teammateResponsibilitySchema,
   teamPlacementDocumentSchema,
 } from "@/server/assignments/models";
+
+import { teammateResponsibilitySchema } from "@/server/shared/models";
+
 import {
   assignmentStatus,
   assertValidRange,

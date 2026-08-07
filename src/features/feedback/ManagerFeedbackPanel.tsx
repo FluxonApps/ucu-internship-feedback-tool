@@ -10,6 +10,7 @@ import type { FeedbackCycleDto } from "@/lib/feedback/types";
 
 import { FeedbackPublicationContent } from "./FeedbackPublicationContent";
 import { StartFeedbackCycleDialog } from "./StartFeedbackCycleDialog";
+import { ScheduledFeedbackList } from "./ScheduledFeedbackList";
 
 const date = (value: string) =>
   new Date(value).toLocaleDateString("en-GB", { timeZone: "UTC" });
@@ -34,6 +35,7 @@ export function ManagerFeedbackPanel({
         </div>
         {!collecting ? <StartFeedbackCycleDialog internshipId={internshipId} /> : null}
       </div>
+
       {collecting ? (
         <CycleCard internshipId={internshipId} cycle={collecting} />
       ) : (
@@ -41,6 +43,9 @@ export function ManagerFeedbackPanel({
           No feedback cycle is collecting.
         </div>
       )}
+
+      <ScheduledFeedbackList internshipId={internshipId} />
+
       {published.length ? (
         <section className="space-y-3 pt-4">
           <div>
