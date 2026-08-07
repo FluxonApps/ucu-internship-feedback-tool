@@ -7,6 +7,7 @@ import { FeedbackPublicationContent } from "./ui/FeedbackPublicationContent";
 
 const publication: PublishedFeedbackDto = {
   internshipId: "internship-1",
+  internId: "intern-1",
   internDisplayName: "Ivy Intern",
   cycleId: "cycle-1",
   evaluationStartsAt: "2026-07-01T00:00:00.000Z",
