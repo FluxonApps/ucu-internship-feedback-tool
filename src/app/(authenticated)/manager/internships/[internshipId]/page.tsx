@@ -1,17 +1,18 @@
-import {
-  AssignmentActions,
-  TeammateAssignmentActions,
-} from "@/features/assignments/AssignmentActions";
+import { Tabs } from "@base-ui/react/tabs";
+import { AnalyticsPanel } from "@/features/feedback/ui/AnalyticsPanel";
+
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { Menu } from "@/components/ui/Menu";
+import { AssignmentsPanel } from "@/features/assignments/ui/AssignmentsPanel";
+import { ManagerFeedbackPanel } from "@/features/feedback/ui/ManagerFeedbackPanel";
+import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
+
 import { requireManagerPage } from "@/server/assignments/page-auth";
 import { getManagedInternshipDetail } from "@/server/assignments/service";
-import { ManagerFeedbackPanel } from "@/features/feedback/ManagerFeedbackPanel";
 import { listManagerFeedbackCycles } from "@/server/feedback/service";
-
-function dateLabel(value: { toDate(): Date } | undefined) {
-  return value ? value.toDate().toLocaleDateString() : "Ongoing";
-}
+import {
+  getAvailableAchievements,
+  getInternAchievements,
+} from "@/server/achievements/service";
 
 export default async function AssignmentDetailPage({
   params,
@@ -20,122 +21,111 @@ export default async function AssignmentDetailPage({
 }) {
   const { internshipId } = await params;
   const context = await requireManagerPage();
-  const [detail, feedbackCycles] = await Promise.all([
-    getManagedInternshipDetail(internshipId, context.userId),
-    listManagerFeedbackCycles(internshipId, context.userId),
-  ]);
-  const currentPlacement =
-    detail.placements.find((placement) => placement.current) ?? detail.placements[0];
-  const assignments = currentPlacement
-    ? detail.assignments.filter(
-        (assignment) => assignment.teamId === currentPlacement.teamId,
-      )
-    : [];
-  const workspaceMenu = [
-    {
-      href: "#assignments",
-      label: "Assignments",
-    },
-    {
-      href: "#feedback-cycles",
-      label: "Feedback",
-    },
-  ];
+
+  const [detail, feedbackCycles, availableAchievements, internAchievements] =
+    await Promise.all([
+      getManagedInternshipDetail(internshipId, context.userId),
+      listManagerFeedbackCycles(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
+    ]);
 
   return (
     <section className="space-y-7">
-      <div className="space-y-2">
-        <Breadcrumbs
-          items={[
-            { label: "Internships", href: "/manager/internships" },
-            { label: detail.internship.internName },
-          ]}
-        />
-        <p className="text-sm font-medium text-[var(--brand-strong)]">
-          {detail.internship.status} internship
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {detail.internship.internName}
-        </h1>
-      </div>
-      <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        <Menu
-          items={workspaceMenu}
-          label="Internship navigation"
-          className="md:flex-col md:overflow-visible"
-        />
-        <div className="space-y-10">
-          <section
-            id="assignments"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Assignments</h2>
-                {currentPlacement ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {currentPlacement.teamTitle} · started{" "}
-                    {dateLabel(currentPlacement.startsAt)}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    No current Team Placement.
-                  </p>
-                )}
-              </div>
-              {currentPlacement ? (
-                <AssignmentActions
-                  internshipId={internshipId}
-                  teamId={currentPlacement.teamId}
-                  teamTitle={currentPlacement.teamTitle}
-                  teammates={detail.teammates}
-                />
-              ) : null}
-            </div>
-            {assignments.length ? (
-              <div className="space-y-3">
-                {assignments.map((assignment) => (
-                  <article
-                    key={assignment.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/40 p-4"
-                  >
-                    <div className="grow">
-                      <p className="font-medium">{assignment.teammateName}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {assignment.responsibilities.join(", ") || "General teammate"} ·{" "}
-                        {dateLabel(assignment.startsAt)} –{" "}
-                        {dateLabel(assignment.endsAt)}
-                      </p>
-                    </div>
-                    {assignment.status !== "ended" ? (
-                      <TeammateAssignmentActions
-                        internshipId={internshipId}
-                        assignmentId={assignment.id}
-                        responsibilities={assignment.responsibilities}
-                      />
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Ended</span>
-                    )}
-                    {assignment.status === "scheduled" ? (
-                      <span className="text-sm text-muted-foreground">Scheduled</span>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl bg-muted/40 p-6 text-sm text-muted-foreground">
-                No teammates assigned to the current Team yet.
-              </div>
-            )}
-          </section>
-          <section
-            id="feedback-cycles"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
-          >
-            <ManagerFeedbackPanel internshipId={internshipId} cycles={feedbackCycles} />
-          </section>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: "Internships", href: "/manager/internships" },
+              { label: detail.internship.internName },
+            ]}
+          />
+          <p className="text-sm font-medium text-[var(--brand-strong)]">
+            {detail.internship.status} internship
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {detail.internship.internName}
+          </h1>
         </div>
       </div>
+
+      <Tabs.Root defaultValue="assignments" className="min-w-0 space-y-6">
+        <Tabs.List
+          aria-label="Internship workspace"
+          activateOnFocus
+          className="flex gap-7 overflow-x-auto border-b"
+        >
+          <Tabs.Tab
+            value="assignments"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Assignments
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="feedback"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Feedback
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="achievements"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Achievements
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="analytics"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Analytics
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="casual-feedback"
+            className="-mb-px shrink-0 border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active]:border-[var(--brand)] data-[active]:text-[var(--brand-strong)]"
+          >
+            Casual Feedback
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="assignments" keepMounted className="min-w-0 overflow-hidden">
+          <AssignmentsPanel internshipId={internshipId} detail={detail} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="feedback" keepMounted className="min-w-0 overflow-hidden">
+          <section>
+            <ManagerFeedbackPanel internshipId={internshipId} cycles={feedbackCycles} />
+          </section>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="achievements" keepMounted className="min-w-0 overflow-hidden">
+          <AchievementsPanel
+            internshipId={internshipId}
+            availableAchievements={availableAchievements}
+            internAchievements={internAchievements}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="analytics" keepMounted className="min-w-0 overflow-hidden">
+          <Tabs.Panel
+            value="analytics"
+            keepMounted
+            className="min-w-0 overflow-hidden"
+          >
+            <AnalyticsPanel
+              internshipId={internshipId}
+              internId={detail.internship.internId}
+            />
+          </Tabs.Panel>
+        </Tabs.Panel>
+
+        <Tabs.Panel
+          value="casual-feedback"
+          keepMounted
+          className="min-w-0 overflow-hidden"
+        >
+          <p className="text-sm text-muted-foreground">To Do</p>
+        </Tabs.Panel>
+      </Tabs.Root>
     </section>
   );
 }

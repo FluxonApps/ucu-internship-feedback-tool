@@ -48,6 +48,11 @@ persisted-document schemas and inferred types in
 those schemas instead of using anonymous `as { ... }` casts. Keep browser-safe
 DTOs separate in `src/lib/{feature}/types.ts`.
 
+Keep feature-specific UI components and client-side API helpers organized
+within the corresponding feature directory. Place UI components in
+`src/features/{feature}/ui/` and client-side API helpers in
+`src/features/{feature}/api/`.
+
 Place reusable, domain-agnostic UI primitives (for example, dialogs and modal
 wrappers) in `src/components/ui/`, not in a feature directory.
 Name React component files after their exported component using PascalCase, for

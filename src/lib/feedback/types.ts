@@ -23,6 +23,8 @@ export type ReviewerStatusDto = {
   status: "notStarted" | "draft" | "submitted";
   submittedAt?: string;
   response?: FeedbackAnswersDto;
+  softScore?: number;
+  techScore?: number;
 };
 
 export type FeedbackCycleDto = {
@@ -69,6 +71,7 @@ export type FeedbackPublicationPreviewDto = {
 
 export type PublishedFeedbackDto = FeedbackPublicationPreviewDto & {
   internshipId: string;
+  internId: string;
   internDisplayName: string;
   cycleId: string;
   evaluationStartsAt: string;

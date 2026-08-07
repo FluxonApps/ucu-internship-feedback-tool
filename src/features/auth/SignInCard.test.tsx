@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SignInCard } from "./SignInCard";
+import { SignInCard } from "./ui/SignInCard";
 
 describe("SignInCard", () => {
   afterEach(() => {

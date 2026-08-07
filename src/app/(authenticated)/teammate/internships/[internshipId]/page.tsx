@@ -5,8 +5,14 @@ import { Menu } from "@/components/ui/Menu";
 import { requireTeammatePage } from "@/server/assignments/page-auth";
 import { getTeammateInternshipDetail } from "@/server/assignments/service";
 import { AuthorizationError } from "@/server/authorization/errors";
-import { TeammateFeedbackPanel } from "@/features/feedback/TeammateFeedbackPanel";
+import { TeammateFeedbackPanel } from "@/features/feedback/ui/TeammateFeedbackPanel";
 import { listTeammateFeedback } from "@/server/feedback/service";
+import { CasualFeedbackPanel } from "@/features/casual-feedback/ui/CasualFeedbackPanel";
+import { listCasualFeedbackForTeammate } from "@/server/casual-feedback/service";
+
+// Сервіси ачівок та UI-компонент
+import { getAvailableAchievements, getInternAchievements } from "@/server/achievements/service";
+import { AchievementsPanel } from "@/features/achievements/ui/AchievementsPanel";
 
 export default async function TeammateInternshipPage({
   params,
@@ -15,19 +21,38 @@ export default async function TeammateInternshipPage({
 }) {
   const { internshipId } = await params;
   const context = await requireTeammatePage();
+
   let internship: Awaited<ReturnType<typeof getTeammateInternshipDetail>>;
   let feedback: Awaited<ReturnType<typeof listTeammateFeedback>>;
+  let casualFeedback: Awaited<ReturnType<typeof listCasualFeedbackForTeammate>>;
+  let availableAchievements: Awaited<ReturnType<typeof getAvailableAchievements>>;
+  let internAchievements: Awaited<ReturnType<typeof getInternAchievements>>;
+
   try {
-    [internship, feedback] = await Promise.all([
+    // Паралельне завантаження даних для обох фічей
+    [
+      internship,
+      feedback,
+      casualFeedback,
+      availableAchievements,
+      internAchievements,
+    ] = await Promise.all([
       getTeammateInternshipDetail(internshipId, context.userId),
       listTeammateFeedback(internshipId, context.userId),
+      listCasualFeedbackForTeammate(internshipId, context.userId),
+      getAvailableAchievements(),
+      getInternAchievements(internshipId),
     ]);
   } catch (error) {
     if (error instanceof AuthorizationError) redirect("/forbidden");
     throw error;
   }
+
+  // Бічне меню з усіма секціями
   const workspaceMenu = [
     { href: "#feedback", label: "Feedback" },
+    { href: "#achievements", label: "Achievements" },
+    { href: "#casual-feedback", label: "Casual Feedback" },
     { href: "#one-on-one-preparation", label: "1:1 Preparation" },
   ];
 
@@ -48,15 +73,20 @@ export default async function TeammateInternshipPage({
         </h1>
       </div>
       <div className="grid gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
-        <Menu
-          items={workspaceMenu}
-          label="Internship navigation"
-          className="md:flex-col md:overflow-visible"
-        />
-        <div className="space-y-10">
+        {/* Адаптивне зафіксоване меню без білої плашки */}
+        <div className="sticky top-0 z-20 -mx-4 bg-[#f0f5f3]/90 px-4 py-3 backdrop-blur-md md:static md:z-auto md:m-0 md:p-0 md:bg-transparent md:backdrop-blur-none md:sticky md:top-24 md:self-start">
+          <Menu
+            items={workspaceMenu}
+            label="Internship navigation"
+            className="md:flex-col md:overflow-visible"
+          />
+        </div>
+
+        {/* min-w-0 запобігає вилазинню контенту в грідах */}
+        <div className="min-w-0 space-y-10">
           <section
             id="feedback"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
           >
             <div>
               <h2 className="text-lg font-semibold">Feedback</h2>
@@ -66,9 +96,40 @@ export default async function TeammateInternshipPage({
             </div>
             <TeammateFeedbackPanel internshipId={internshipId} feedback={feedback} />
           </section>
+
+          {/* Секція Achievements */}
+          <section
+            id="achievements"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <AchievementsPanel
+              internshipId={internshipId}
+              availableAchievements={availableAchievements}
+              internAchievements={internAchievements}
+            />
+          </section>
+
+          {/* Секція Casual Feedback */}
+          <section
+            id="casual-feedback"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
+          >
+            <div>
+              <h2 className="text-lg font-semibold">Casual Feedback</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Jot down a quick, informal note for a given date.
+              </p>
+            </div>
+            <CasualFeedbackPanel
+              internshipId={internshipId}
+              notes={casualFeedback}
+              canWrite
+            />
+          </section>
+
           <section
             id="one-on-one-preparation"
-            className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-6"
+            className="scroll-mt-24 min-w-0 overflow-hidden space-y-4 rounded-2xl border bg-card p-4 sm:p-6"
           >
             <div>
               <h2 className="text-lg font-semibold">1:1 Preparation</h2>
